@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vanguard Project - Open Source Music Player</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%234ff828'/%3E%3Cg transform='translate(3, 3)'%3E%3Cpath d='M9 18V5l12-2v13M9 9l12-2' stroke='%23000' stroke-width='2.5' fill='none'/%3E%3Ccircle cx='6' cy='18' r='3.2' fill='%23000'/%3E%3Ccircle cx='18' cy='16' r='3.2' fill='%23000'/%3E%3C/g%3E%3C/svg%3E" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-base: #000000;
+            --bg-nav: rgba(10, 10, 10, 0.85);
+            --bg-card: #121212;
+            --vanguard-green: #4ff828;
+            --vanguard-green-dim: rgba(79, 248, 40, 0.15);
+            --vanguard-green-glow: rgba(79, 248, 40, 0.4);
+            --text-main: #ffffff;
+            --text-secondary: #9ca3af;
+            --border-color: #242424;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            position: relative;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        .music-pattern {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: -3;
+            background-image: url("data:image/svg+xml,%3Csvg width='150' height='150' viewBox='0 0 150 150' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%234ff828' fill-opacity='0.04'%3E%3Cpath d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z' transform='translate(20,20) scale(1.5) rotate(15)'/%3E%3Cpath d='M22 3H10v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h10v6.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V3z' transform='translate(80,40) scale(1.2) rotate(-10)'/%3E%3Cpath d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z' transform='translate(40,100) scale(1.3) rotate(-20)'/%3E%3Cpath d='M22 3H10v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h10v6.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V3z' transform='translate(110,110) scale(1.4) rotate(15)'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: 150px 150px;
+            animation: scroll-pattern 40s linear infinite;
+        }
+
+        @keyframes scroll-pattern {
+            0% { background-position: 0 0; }
+            100% { background-position: 150px 150px; }
+        }
+
+        .neon-blur-circle {
+            position: fixed;
+            width: 70vw;
+            height: 70vw;
+            max-width: 900px;
+            max-height: 900px;
+            background: var(--vanguard-green);
+            top: 50%;
+            left: 50%;
+            border-radius: 50%;
+            filter: blur(180px);
+            opacity: 0.15;
+            z-index: -2;
+            pointer-events: none;
+            animation: float-around 25s ease-in-out infinite;
+        }
+
+        @keyframes float-around {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.15; }
+            25% { transform: translate(-20%, -25%) scale(1.1); opacity: 0.25; }
+            50% { transform: translate(-80%, -75%) scale(0.9); opacity: 0.1; }
+            75% { transform: translate(-30%, -85%) scale(1.05); opacity: 0.2; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0.15; }
+        }
+
+        .reveal-on-scroll {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease;
+            will-change: opacity, transform;
+        }
+
+        .reveal-on-scroll.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .delay-100 { transition-delay: 0.1s; }
+        .delay-200 { transition-delay: 0.2s; }
+        .delay-300 { transition-delay: 0.3s; }
+
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 70px;
+            background: var(--bg-nav);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 5%;
+            z-index: 1000;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-main);
+            font-weight: 800;
+            font-size: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        .vanguard-gradient {
+            background: linear-gradient(90deg, #bcfb9b 0%, #20d859 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-logo-icon {
+            width: 32px;
+            height: 32px;
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .nav-logo-icon img {
+            width: 130%;
+            height: 130%;
+            object-fit: cover;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin-right: 50px;
+        }
+
+        .nav-link {
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            z-index: 0;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link::after,
+        .nav-btn::after,
+        .hero-btn::after {
+            content: "";
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            bottom: -50%;
+            left: -50%;
+            background: linear-gradient(45deg, #020a04, var(--vanguard-green), #031408, var(--vanguard-green), #020a04);
+            background-size: 300% 300%;
+            z-index: -1;
+            border-radius: 100vmax;
+            filter: blur(12px);
+            opacity: 0;
+            transition: opacity 0.5s;
+            animation: rotate-97 5s linear infinite;
+        }
+
+        .nav-link:hover {
+            color: #ffffff;
+            text-shadow: 0 0 5px rgba(0,0,0,0.8);
+        }
+
+        .nav-link:hover::after,
+        .nav-btn:hover::after,
+        .hero-btn:hover::after {
+            opacity: 0.8;
+        }
+
+        @keyframes rotate-97 {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .nav-btn {
+            background-color: var(--vanguard-green);
+            color: #000;
+            text-decoration: none;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
+            transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease, color 0.3s ease;
+            box-shadow: 0 0 10px rgba(79, 248, 40, 0.3);
+            position: relative;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            background-color: transparent;
+            color: #ffffff;
+            box-shadow: 0 0 20px rgba(79, 248, 40, 0.6);
+            text-shadow: 0 0 5px rgba(0,0,0,0.8);
+        }
+
+        .github-corner svg {
+            fill: var(--vanguard-green);
+            color: var(--bg-base);
+            position: fixed;
+            top: 0;
+            border: 0;
+            right: 0;
+            z-index: 1001;
+            transition: filter 0.3s ease;
+            filter: drop-shadow(0 0 10px rgba(79, 248, 40, 0.3));
+        }
+
+        .github-corner:hover svg {
+            filter: drop-shadow(0 0 20px rgba(79, 248, 40, 0.6));
+        }
+
+        .github-corner:hover .octo-arm {
+            animation: octocat-wave 560ms ease-in-out;
+        }
+
+        @keyframes octocat-wave {
+            0%, 100% { transform: rotate(0); }
+            20%, 60% { transform: rotate(-25deg); }
+            40%, 80% { transform: rotate(10deg); }
+        }
+
+        @media (max-width: 500px) {
+            .github-corner:hover .octo-arm { animation: none; }
+            .github-corner .octo-arm { animation: octocat-wave 560ms ease-in-out; }
+            .nav-links { margin-right: 0; }
+        }
+
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 100px 5% 50px;
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .hero-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: fadeUpHero 1s ease-out forwards;
+        }
+
+        @keyframes fadeUpHero {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hero-tag {
+            display: inline-block;
+            color: var(--vanguard-green);
+            font-weight: 600;
+            font-size: 14px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .hero-title {
+            font-size: 56px;
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -1.5px;
+            margin-bottom: 24px;
+        }
+
+        .hero-title span {
+            background: linear-gradient(135deg, #ffffff 0%, var(--vanguard-green) 50%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-desc {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin: 0 auto 40px auto;
+            font-weight: 300;
+            max-width: 750px;
+        }
+
+        .hero-desc strong {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .hero-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background-color: var(--vanguard-green);
+            color: #000;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 10px 20px rgba(79, 248, 40, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease, color 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .hero-btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 15px 30px rgba(79, 248, 40, 0.4);
+            background-color: transparent;
+            color: #ffffff;
+            text-shadow: 0 0 5px rgba(0,0,0,0.8);
+        }
+
+        .download-section {
+            min-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 5%;
+            text-align: center;
+            position: relative;
+        }
+
+        .download-section h2 {
+            font-size: 40px;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+
+        .download-section p {
+            color: var(--text-secondary);
+            font-size: 18px;
+            margin-bottom: 50px;
+            max-width: 500px;
+        }
+
+        .download-cards {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .dl-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px 40px;
+            width: 280px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: var(--text-main);
+            position: relative;
+        }
+
+        .dl-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(79, 248, 40, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(79, 248, 40, 0.1);
+        }
+
+        .dl-card.is-visible.highlight-os {
+            border-color: rgba(79, 248, 40, 0.6);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(79, 248, 40, 0.15);
+            transform: translateY(-5px) scale(1.02);
+            z-index: 2;
+        }
+
+        .dl-card.highlight-os::before {
+            content: "RECOMMENDED";
+            position: absolute;
+            top: -12px;
+            background: var(--vanguard-green);
+            color: #000;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 12px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 10px rgba(79, 248, 40, 0.3);
+        }
+
+        .dl-card.is-visible.dimmed-os {
+            opacity: 0.4;
+            transform: translateY(0) scale(0.95);
+            filter: grayscale(60%);
+            z-index: 1;
+        }
+
+        .dl-card.is-visible.dimmed-os:hover {
+            opacity: 1;
+            transform: translateY(-5px) scale(1);
+            filter: grayscale(0%);
+            border-color: rgba(79, 248, 40, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(79, 248, 40, 0.1);
+        }
+
+        .dl-icon {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 20px;
+            fill: var(--text-main);
+            transition: fill 0.3s ease, filter 0.3s ease, transform 0.3s ease;
+        }
+
+        .dl-card:hover .dl-icon {
+            fill: var(--vanguard-green);
+        }
+
+        .dl-card:hover img.dl-icon,
+        .dl-card.highlight-os img.dl-icon {
+            filter: drop-shadow(0 0 15px rgba(79, 248, 40, 0.8));
+            transform: scale(1.05);
+        }
+
+        .dl-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .dl-format {
+            font-size: 13px;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.05);
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        .donate-section {
+            min-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 5% 120px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .donate-section::before {
+            content: "";
+            position: absolute;
+            width: 60vw;
+            height: 60vw;
+            max-width: 800px;
+            max-height: 800px;
+            background: var(--vanguard-green);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            filter: blur(160px);
+            opacity: 0.1;
+            z-index: -1;
+            pointer-events: none;
+            animation: pulse-deep 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse-deep {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.05; }
+            100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.12; }
+        }
+
+        .donate-title-glow {
+            position: relative;
+        }
+
+        .donate-title-glow::after {
+            content: "Vanguard";
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: -1;
+            background: none;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(79, 248, 40, 0.6);
+        }
+
+        .donate-icon {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            margin-bottom: 24px;
+            filter: drop-shadow(0 20px 20px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 15px rgba(79, 248, 40, 0.2));
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .donate-section h2 {
+            font-size: 48px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 18px;
+            text-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .donate-desc {
+            font-size: 18px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            font-weight: 300;
+            max-width: 580px;
+            margin: 0 auto 40px auto;
+        }
+
+        .donate-desc strong {
+            color: #ffffff;
+            font-weight: 600;
+            text-shadow: 0 0 15px rgba(255,255,255,0.2);
+        }
+
+        .donate-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .donate-wrapper::before {
+            content: "";
+            position: absolute;
+            width: 180px;
+            height: 40px;
+            background: var(--vanguard-green);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 20px;
+            filter: blur(25px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .donate-wrapper:hover::before {
+            opacity: 0.5;
+        }
+
+        .donate-wrapper a {
+            display: block;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.3s ease;
+        }
+
+        .donate-wrapper a:hover {
+            transform: scale(1.06) translateY(-2px);
+            filter: brightness(1.15);
+        }
+
+        .donate-wrapper img {
+            display: block;
+            border-radius: 8px;
+            filter: drop-shadow(0 15px 15px rgba(0, 0, 0, 0.6));
+        }
+
+        @media (max-width: 900px) {
+            .hero {
+                padding-top: 120px;
+            }
+            .hero-title {
+                font-size: 42px;
+            }
+            .donate-section h2 { font-size: 40px; }
+            .donate-desc { font-size: 16px; padding: 0 20px; }
+            .donate-icon { width: 80px; height: 80px; }
+        }
+
+        @media (max-width: 600px) {
+            .nav-links {
+                display: none;
+            }
+            .nav-btn {
+                display: block;
+            }
+            .hero-title {
+                font-size: 36px;
+                letter-spacing: -1px;
+            }
+            .hero-desc {
+                font-size: 16px;
+                padding: 0 10px;
+            }
+            .download-section h2, .donate-section h2 {
+                font-size: 32px;
+            }
+            .dl-card {
+                width: 100%;
+                max-width: 320px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <a href="https://github.com/ishmweet" target="_blank" rel="noopener noreferrer" class="github-corner" aria-label="View source on GitHub">
+        <svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true">
+            <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+            <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+            <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path>
+        </svg>
+    </a>
+
+    <div class="music-pattern"></div>
+    <div class="neon-blur-circle"></div>
+
+    <nav>
+        <a href="#" class="nav-brand">
+            <div class="nav-logo-icon">
+                <img src="vanguard_player_icon.png" alt="Icon">
+            </div>
+            <span><span class="vanguard-gradient">Vanguard</span> Player</span>
+        </a>
+        <div class="nav-links">
+            <a href="#" class="nav-link">Home</a>
+            <a href="#donate" class="nav-link">Donate</a>
+            <a href="#download" class="nav-btn">Download</a>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-content">
+            <span class="hero-tag">ZERO ADS. ZERO TRACKING.</span>
+            <h1 class="hero-title">Your music, <span>uninterrupted.</span></h1>
+            <p class="hero-desc">
+                Experience the ultimate ad-free music player designed for true audio enthusiasts. <strong>Vanguard Player</strong> is meticulously built from the ground up to deliver pure, high-fidelity playback, seamless library management, and a strikingly sleek interface—completely free of distracting clutter, tracking, or paywalls. It’s fully open-source, community-driven, and completely yours to control. Immerse yourself in the music exactly the way it was meant to be heard.
+            </p>
+            <a href="#download" class="hero-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Download Now
+            </a>
+        </div>
+    </header>
+
+    <section id="download" class="download-section">
+        <h2 class="reveal-on-scroll">Choose your platform</h2>
+        <p class="reveal-on-scroll delay-100">Vanguard Player is currently available for Windows and Linux architectures.</p>
+        
+        <div class="download-cards">
+            <a href="#" class="dl-card reveal-on-scroll delay-200" id="dl-windows">
+                <img class="dl-icon" src="https://upload.wikimedia.org/wikipedia/commons/8/87/Windows_logo_-_2021.svg" alt="Windows Logo" />
+                <div class="dl-title">Windows</div>
+                <div class="dl-format">.exe (x64)</div>
+            </a>
+
+            <a href="#" class="dl-card reveal-on-scroll delay-300" id="dl-linux">
+                <img class="dl-icon" src="https://upload.wikimedia.org/wikipedia/commons/3/35/Tux.svg" alt="Linux Tux Logo" />
+                <div class="dl-title">Linux</div>
+                <div class="dl-format">.AppImage (x64)</div>
+            </a>
+        </div>
+    </section>
+
+    <section id="donate" class="donate-section">
+        <img src="vanguard_player_icon.png" alt="Vanguard Player Icon" class="donate-icon reveal-on-scroll">
+        <h2 class="reveal-on-scroll delay-100"><span class="vanguard-gradient donate-title-glow">Vanguard</span> Player</h2>
+        
+        <p class="donate-desc reveal-on-scroll delay-200">
+            If you enjoy the project, consider supporting its development. It helps bring new features, improvements, and keeps the project alive.
+        </p>
+
+        <div class="donate-wrapper reveal-on-scroll delay-300">
+            <a href="https://buymeachai.ezee.li/vanguard_dev" target="_blank" rel="noopener noreferrer">
+                <img src="https://buymeachai.ezee.li/assets/images/buymeachai-button.png" alt="Buy Me A Chai" width="200">
+            </a>
+        </div>
+    </section>
+
+    <script>
+        function initAnimationsAndDetection() {
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.15
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                    } else {
+                        entry.target.classList.remove('is-visible');
+                    }
+                });
+            }, observerOptions);
+
+            const elementsToReveal = document.querySelectorAll('.reveal-on-scroll');
+            elementsToReveal.forEach(el => observer.observe(el));
+
+            const userAgent = navigator.userAgent.toLowerCase();
+            const winCard = document.getElementById('dl-windows');
+            const linuxCard = document.getElementById('dl-linux');
+            
+            const isMobile = /mobile|android|iphone|ipad|ipod|windows phone/i.test(userAgent) || window.innerWidth <= 768;
+
+            if (winCard && linuxCard && !isMobile) {
+                if (userAgent.indexOf("windows") !== -1 || userAgent.indexOf("win32") !== -1) {
+                    winCard.classList.add('highlight-os');
+                    linuxCard.classList.add('dimmed-os');
+                } 
+                else if (userAgent.indexOf("linux") !== -1 || userAgent.indexOf("x11") !== -1) {
+                    linuxCard.classList.add('highlight-os');
+                    winCard.classList.add('dimmed-os');
+                }
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initAnimationsAndDetection);
+        } else {
+            initAnimationsAndDetection();
+        }
+    </script>
+
+</body>
+</html>
