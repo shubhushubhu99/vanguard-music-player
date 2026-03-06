@@ -39,3 +39,4 @@ Thumbs.db
 *.sw?
 *.swp
 *.swo
+.vscode/
