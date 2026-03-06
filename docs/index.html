@@ -12,25 +12,20 @@
     <style>
         :root {
             --bg-base: #000000;
-            --bg-nav: rgba(10, 10, 10, 0.85);
-            --bg-card: #121212;
+            --bg-nav: rgba(6, 6, 6, 0.90);
+            --bg-card: #0e0e0e;
+            --bg-card-hover: #161616;
             --vanguard-green: #4ff828;
-            --vanguard-green-dim: rgba(79, 248, 40, 0.15);
+            --vanguard-green-dim: rgba(79, 248, 40, 0.12);
             --vanguard-green-glow: rgba(79, 248, 40, 0.4);
             --text-main: #ffffff;
-            --text-secondary: #9ca3af;
-            --border-color: #242424;
+            --text-secondary: #7d8590;
+            --border-color: #1e1e1e;
+            --border-hover: rgba(79, 248, 40, 0.4);
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
 
         body {
             background-color: var(--bg-base);
@@ -41,11 +36,12 @@
             line-height: 1.6;
         }
 
+        /* ── Background ── */
         .music-pattern {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             z-index: -3;
-            background-image: url("data:image/svg+xml,%3Csvg width='150' height='150' viewBox='0 0 150 150' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%234ff828' fill-opacity='0.04'%3E%3Cpath d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z' transform='translate(20,20) scale(1.5) rotate(15)'/%3E%3Cpath d='M22 3H10v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h10v6.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V3z' transform='translate(80,40) scale(1.2) rotate(-10)'/%3E%3Cpath d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z' transform='translate(40,100) scale(1.3) rotate(-20)'/%3E%3Cpath d='M22 3H10v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h10v6.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V3z' transform='translate(110,110) scale(1.4) rotate(15)'/%3E%3C/g%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg width='150' height='150' viewBox='0 0 150 150' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%234ff828' fill-opacity='0.03'%3E%3Cpath d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z' transform='translate(20,20) scale(1.5) rotate(15)'/%3E%3Cpath d='M22 3H10v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h10v6.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V3z' transform='translate(80,40) scale(1.2) rotate(-10)'/%3E%3Cpath d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z' transform='translate(40,100) scale(1.3) rotate(-20)'/%3E%3Cpath d='M22 3H10v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h10v6.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V3z' transform='translate(110,110) scale(1.4) rotate(15)'/%3E%3C/g%3E%3C/svg%3E");
             background-size: 150px 150px;
             animation: scroll-pattern 40s linear infinite;
         }
@@ -57,69 +53,72 @@
 
         .neon-blur-circle {
             position: fixed;
-            width: 70vw;
-            height: 70vw;
-            max-width: 900px;
-            max-height: 900px;
+            width: 70vw; height: 70vw;
+            max-width: 900px; max-height: 900px;
             background: var(--vanguard-green);
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             border-radius: 50%;
-            filter: blur(180px);
-            opacity: 0.15;
+            filter: blur(200px);
+            opacity: 0.1;
             z-index: -2;
             pointer-events: none;
             animation: float-around 25s ease-in-out infinite;
         }
 
         @keyframes float-around {
-            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.15; }
-            25% { transform: translate(-20%, -25%) scale(1.1); opacity: 0.25; }
-            50% { transform: translate(-80%, -75%) scale(0.9); opacity: 0.1; }
-            75% { transform: translate(-30%, -85%) scale(1.05); opacity: 0.2; }
-            100% { transform: translate(-50%, -50%) scale(1); opacity: 0.15; }
+            0%   { transform: translate(-50%, -50%) scale(1); opacity: 0.10; }
+            25%  { transform: translate(-20%, -25%) scale(1.1); opacity: 0.18; }
+            50%  { transform: translate(-80%, -75%) scale(0.9); opacity: 0.07; }
+            75%  { transform: translate(-30%, -85%) scale(1.05); opacity: 0.14; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0.10; }
         }
 
+        /* ── Reveal ── */
         .reveal-on-scroll {
             opacity: 0;
-            transform: translateY(40px);
-            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease;
+            transform: translateY(36px);
+            transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+                        border-color 0.3s ease, box-shadow 0.3s ease;
             will-change: opacity, transform;
         }
-
-        .reveal-on-scroll.is-visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
+        .reveal-on-scroll.is-visible { opacity: 1; transform: translateY(0); }
         .delay-100 { transition-delay: 0.1s; }
         .delay-200 { transition-delay: 0.2s; }
         .delay-300 { transition-delay: 0.3s; }
+        .delay-400 { transition-delay: 0.4s; }
 
+        /* ── Nav ── */
         nav {
             position: fixed;
             top: 0; left: 0; right: 0;
-            height: 70px;
+            height: 66px;
             background: var(--bg-nav);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.04);
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 5%;
             z-index: 1000;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        nav.scrolled {
+            background: rgba(4, 4, 4, 0.96);
+            box-shadow: 0 1px 0 rgba(79, 248, 40, 0.08);
         }
 
         .nav-brand {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 11px;
             text-decoration: none;
             color: var(--text-main);
             font-weight: 800;
-            font-size: 20px;
-            letter-spacing: 0.5px;
+            font-size: 19px;
+            letter-spacing: 0.3px;
         }
 
         .vanguard-gradient {
@@ -129,52 +128,44 @@
         }
 
         .nav-logo-icon {
-            width: 32px;
-            height: 32px;
-            background-color: #1a1a1a;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 30px; height: 30px;
+            background-color: #111;
+            border-radius: 7px;
+            display: flex; align-items: center; justify-content: center;
             overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(79,248,40,0.15);
         }
-
-        .nav-logo-icon img {
-            width: 130%;
-            height: 130%;
-            object-fit: cover;
-        }
+        .nav-logo-icon img { width: 130%; height: 130%; object-fit: cover; }
 
         .nav-links {
             display: flex;
             align-items: center;
-            gap: 30px;
+            gap: 4px;
             margin-right: 50px;
         }
 
         .nav-link {
-            color: var(--text-main);
+            color: var(--text-secondary);
             text-decoration: none;
-            font-size: 15px;
-            font-weight: 600;
-            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 7px 15px;
             border-radius: 8px;
             position: relative;
             overflow: hidden;
             z-index: 0;
-            transition: color 0.3s ease;
+            transition: color 0.25s ease, background 0.25s ease;
+        }
+        .nav-link:hover {
+            color: var(--text-main);
+            background: rgba(255,255,255,0.05);
         }
 
-        .nav-link::after,
-        .nav-btn::after,
-        .hero-btn::after {
+        /* rotating glow layer for nav-link, nav-btn, hero-btn */
+        .nav-link::after, .nav-btn::after, .hero-btn::after {
             content: "";
             position: absolute;
-            top: -50%;
-            right: -50%;
-            bottom: -50%;
-            left: -50%;
+            top: -50%; right: -50%; bottom: -50%; left: -50%;
             background: linear-gradient(45deg, #020a04, var(--vanguard-green), #031408, var(--vanguard-green), #020a04);
             background-size: 300% 300%;
             z-index: -1;
@@ -184,20 +175,10 @@
             transition: opacity 0.5s;
             animation: rotate-97 5s linear infinite;
         }
-
-        .nav-link:hover {
-            color: #ffffff;
-            text-shadow: 0 0 5px rgba(0,0,0,0.8);
-        }
-
-        .nav-link:hover::after,
-        .nav-btn:hover::after,
-        .hero-btn:hover::after {
-            opacity: 0.8;
-        }
+        .nav-link:hover::after, .nav-btn:hover::after, .hero-btn:hover::after { opacity: 0.8; }
 
         @keyframes rotate-97 {
-            0% { transform: rotate(0deg); }
+            0%   { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
 
@@ -205,79 +186,63 @@
             background-color: var(--vanguard-green);
             color: #000;
             text-decoration: none;
-            padding: 8px 20px;
+            padding: 7px 18px;
             border-radius: 8px;
-            font-weight: 600;
-            font-size: 15px;
+            font-weight: 700;
+            font-size: 14px;
             transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease, color 0.3s ease;
-            box-shadow: 0 0 10px rgba(79, 248, 40, 0.3);
+            box-shadow: 0 0 14px rgba(79, 248, 40, 0.25);
             position: relative;
             overflow: hidden;
             z-index: 0;
         }
-
         .nav-btn:hover {
             transform: translateY(-2px);
             background-color: transparent;
             color: #ffffff;
-            box-shadow: 0 0 20px rgba(79, 248, 40, 0.6);
-            text-shadow: 0 0 5px rgba(0,0,0,0.8);
+            box-shadow: 0 0 22px rgba(79, 248, 40, 0.5);
         }
 
+        /* ── GitHub corner ── */
         .github-corner svg {
             fill: var(--vanguard-green);
             color: var(--bg-base);
             position: fixed;
-            top: 0;
-            border: 0;
-            right: 0;
+            top: 0; border: 0; right: 0;
             z-index: 1001;
             transition: filter 0.3s ease;
-            filter: drop-shadow(0 0 10px rgba(79, 248, 40, 0.3));
+            filter: drop-shadow(0 0 8px rgba(79, 248, 40, 0.25));
         }
-
-        .github-corner:hover svg {
-            filter: drop-shadow(0 0 20px rgba(79, 248, 40, 0.6));
-        }
-
-        .github-corner:hover .octo-arm {
-            animation: octocat-wave 560ms ease-in-out;
-        }
-
+        .github-corner:hover svg { filter: drop-shadow(0 0 18px rgba(79, 248, 40, 0.55)); }
+        .github-corner:hover .octo-arm { animation: octocat-wave 560ms ease-in-out; }
         @keyframes octocat-wave {
             0%, 100% { transform: rotate(0); }
             20%, 60% { transform: rotate(-25deg); }
             40%, 80% { transform: rotate(10deg); }
         }
-
         @media (max-width: 500px) {
             .github-corner:hover .octo-arm { animation: none; }
             .github-corner .octo-arm { animation: octocat-wave 560ms ease-in-out; }
             .nav-links { margin-right: 0; }
         }
 
+        /* ── Hero ── */
         .hero {
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
             padding: 100px 5% 50px;
-            max-width: 900px;
+            max-width: 920px;
             margin: 0 auto;
             text-align: center;
         }
-
         .hero-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            display: flex; flex-direction: column; align-items: center;
             animation: fadeUpHero 1s ease-out forwards;
         }
-
         @keyframes fadeUpHero {
             from { opacity: 0; transform: translateY(40px); }
-            to { opacity: 1; transform: translateY(0); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
         .hero-tag {
@@ -291,13 +256,12 @@
         }
 
         .hero-title {
-            font-size: 56px;
+            font-size: 62px;
             font-weight: 800;
-            line-height: 1.1;
-            letter-spacing: -1.5px;
-            margin-bottom: 24px;
+            line-height: 1.08;
+            letter-spacing: -2px;
+            margin-bottom: 26px;
         }
-
         .hero-title span {
             background: linear-gradient(135deg, #ffffff 0%, var(--vanguard-green) 50%, #10b981 100%);
             -webkit-background-clip: text;
@@ -305,17 +269,14 @@
         }
 
         .hero-desc {
-            font-size: 18px;
+            font-size: 17px;
             color: var(--text-secondary);
-            margin: 0 auto 40px auto;
-            font-weight: 300;
-            max-width: 750px;
+            margin: 0 auto 44px auto;
+            font-weight: 400;
+            max-width: 680px;
+            line-height: 1.75;
         }
-
-        .hero-desc strong {
-            color: #fff;
-            font-weight: 600;
-        }
+        .hero-desc strong { color: #fff; font-weight: 600; }
 
         .hero-btn {
             display: inline-flex;
@@ -324,304 +285,644 @@
             background-color: var(--vanguard-green);
             color: #000;
             text-decoration: none;
-            padding: 16px 32px;
+            padding: 15px 32px;
             border-radius: 50px;
             font-weight: 700;
-            font-size: 18px;
-            box-shadow: 0 10px 20px rgba(79, 248, 40, 0.3);
+            font-size: 16px;
+            box-shadow: 0 8px 24px rgba(79, 248, 40, 0.28);
             transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease, color 0.3s ease;
             position: relative;
             overflow: hidden;
             z-index: 0;
         }
-
         .hero-btn:hover {
             transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 15px 30px rgba(79, 248, 40, 0.4);
+            box-shadow: 0 14px 32px rgba(79, 248, 40, 0.4);
             background-color: transparent;
             color: #ffffff;
-            text-shadow: 0 0 5px rgba(0,0,0,0.8);
         }
 
+        /* ── Section separator ── */
+        .section-divider {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(79,248,40,0.15), transparent);
+            margin: 0 auto;
+            max-width: 900px;
+        }
+
+        /* ── Download ── */
         .download-section {
             min-height: 80vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 80px 5%;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 100px 5%;
             text-align: center;
             position: relative;
         }
-
         .download-section h2 {
-            font-size: 40px;
-            font-weight: 800;
-            margin-bottom: 16px;
+            font-size: 42px; font-weight: 800; margin-bottom: 14px;
+            letter-spacing: -1px;
         }
-
         .download-section p {
             color: var(--text-secondary);
-            font-size: 18px;
-            margin-bottom: 50px;
-            max-width: 500px;
+            font-size: 17px;
+            margin-bottom: 52px;
+            max-width: 480px;
         }
-
         .download-cards {
-            display: flex;
-            gap: 24px;
-            flex-wrap: wrap;
-            justify-content: center;
+            display: flex; gap: 22px; flex-wrap: wrap; justify-content: center;
         }
-
         .dl-card {
-            background-color: var(--bg-card);
+            background: linear-gradient(145deg, #111, #0a0a0a);
             border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 30px 40px;
+            border-radius: 18px;
+            padding: 32px 44px;
             width: 280px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            display: flex; flex-direction: column; align-items: center;
             text-decoration: none;
             color: var(--text-main);
             position: relative;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                        border-color 0.3s ease, box-shadow 0.3s ease;
         }
-
         .dl-card:hover {
-            transform: translateY(-5px);
-            border-color: rgba(79, 248, 40, 0.5);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(79, 248, 40, 0.1);
+            transform: translateY(-6px);
+            border-color: var(--border-hover);
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.7), 0 0 30px rgba(79, 248, 40, 0.08);
         }
-
         .dl-card.is-visible.highlight-os {
-            border-color: rgba(79, 248, 40, 0.6);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(79, 248, 40, 0.15);
-            transform: translateY(-5px) scale(1.02);
+            border-color: rgba(79,248,40,0.5);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.7), 0 0 20px rgba(79,248,40,0.12);
+            transform: translateY(-6px) scale(1.02);
             z-index: 2;
         }
-
         .dl-card.highlight-os::before {
             content: "RECOMMENDED";
             position: absolute;
             top: -12px;
             background: var(--vanguard-green);
             color: #000;
-            font-size: 11px;
-            font-weight: 800;
-            padding: 4px 12px;
-            border-radius: 20px;
-            letter-spacing: 0.5px;
-            box-shadow: 0 4px 10px rgba(79, 248, 40, 0.3);
+            font-size: 10px; font-weight: 800;
+            padding: 4px 12px; border-radius: 20px;
+            letter-spacing: 0.8px;
+            box-shadow: 0 4px 12px rgba(79, 248, 40, 0.35);
         }
-
         .dl-card.is-visible.dimmed-os {
-            opacity: 0.4;
-            transform: translateY(0) scale(0.95);
-            filter: grayscale(60%);
-            z-index: 1;
+            opacity: 0.35; transform: scale(0.95); filter: grayscale(60%); z-index: 1;
         }
-
         .dl-card.is-visible.dimmed-os:hover {
-            opacity: 1;
-            transform: translateY(-5px) scale(1);
+            opacity: 1; transform: translateY(-5px) scale(1);
             filter: grayscale(0%);
-            border-color: rgba(79, 248, 40, 0.5);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(79, 248, 40, 0.1);
+            border-color: var(--border-hover);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.7), 0 0 28px rgba(79,248,40,0.08);
         }
-
-        .dl-icon {
-            width: 60px;
-            height: 60px;
-            margin-bottom: 20px;
-            fill: var(--text-main);
-            transition: fill 0.3s ease, filter 0.3s ease, transform 0.3s ease;
-        }
-
-        .dl-card:hover .dl-icon {
-            fill: var(--vanguard-green);
-        }
-
+        .dl-icon { width: 58px; height: 58px; margin-bottom: 18px; transition: filter 0.3s ease, transform 0.3s ease; }
         .dl-card:hover img.dl-icon,
-        .dl-card.highlight-os img.dl-icon {
-            filter: drop-shadow(0 0 15px rgba(79, 248, 40, 0.8));
-            transform: scale(1.05);
-        }
-
-        .dl-title {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
+        .dl-card.highlight-os img.dl-icon { filter: drop-shadow(0 0 14px rgba(79,248,40,0.75)); transform: scale(1.06); }
+        .dl-title { font-size: 19px; font-weight: 700; margin-bottom: 8px; }
         .dl-format {
-            font-size: 13px;
-            color: var(--text-secondary);
+            font-size: 12px; color: var(--text-secondary);
             background: rgba(255,255,255,0.05);
-            padding: 4px 10px;
-            border-radius: 20px;
+            padding: 4px 10px; border-radius: 20px;
         }
 
-        .donate-section {
-            min-height: 70vh;
+        /* ═══════════════════════════════════════
+           FAQ SECTION
+        ═══════════════════════════════════════ */
+        .faq-section {
+            padding: 100px 5%;
+            max-width: 820px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .faq-label {
+            display: inline-block;
+            color: var(--vanguard-green);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            opacity: 0.8;
+        }
+
+        .faq-section h2 {
+            font-size: 42px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 14px;
+        }
+
+        .faq-section > p {
+            color: var(--text-secondary);
+            font-size: 16px;
+            margin-bottom: 56px;
+            max-width: 480px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .faq-list {
             display: flex;
             flex-direction: column;
+            gap: 8px;
+            text-align: left;
+        }
+
+        .faq-category {
+            margin-bottom: 10px;
+        }
+
+        .faq-category-header {
+            display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 9px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+            color: var(--vanguard-green);
+            opacity: 0.75;
+            padding: 28px 4px 10px;
+        }
+
+        .faq-category-header svg {
+            stroke: var(--vanguard-green);
+            opacity: 0.9;
+            flex-shrink: 0;
+        }
+
+        .faq-item {
+            background: linear-gradient(145deg, #0f0f0f, #0a0a0a);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            overflow: hidden;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .faq-item:hover {
+            border-color: rgba(79, 248, 40, 0.2);
+        }
+
+        .faq-item.open {
+            border-color: rgba(79, 248, 40, 0.3);
+            box-shadow: 0 0 20px rgba(79, 248, 40, 0.05);
+        }
+
+        .faq-question {
+            width: 100%;
+            background: none;
+            border: none;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            text-align: left;
+            padding: 20px 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            transition: color 0.25s ease;
+        }
+
+        .faq-item.open .faq-question {
+            color: var(--vanguard-green);
+        }
+
+        .faq-icon {
+            width: 22px; height: 22px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: center;
+            transition: border-color 0.25s ease, background 0.25s ease, transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .faq-icon svg {
+            width: 10px; height: 10px;
+            stroke: var(--text-secondary);
+            transition: stroke 0.25s ease;
+        }
+
+        .faq-item.open .faq-icon {
+            background: var(--vanguard-green);
+            border-color: var(--vanguard-green);
+            transform: rotate(45deg);
+        }
+
+        .faq-item.open .faq-icon svg {
+            stroke: #000;
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.45s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease;
+        }
+
+        .faq-item.open .faq-answer {
+            max-height: 400px;
+        }
+
+        .faq-answer-inner {
+            padding: 0 24px 22px 24px;
+            color: var(--text-secondary);
+            font-size: 14.5px;
+            line-height: 1.75;
+            border-top: 1px solid var(--border-color);
+            padding-top: 18px;
+        }
+
+        .faq-answer-inner a {
+            color: var(--vanguard-green);
+            text-decoration: none;
+        }
+        .faq-answer-inner a:hover { text-decoration: underline; }
+
+        /* ── Donate ── */
+        .donate-section {
+            min-height: 70vh;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
             padding: 80px 5% 120px;
             text-align: center;
             position: relative;
             z-index: 1;
         }
-
         .donate-section::before {
             content: "";
             position: absolute;
-            width: 60vw;
-            height: 60vw;
-            max-width: 800px;
-            max-height: 800px;
+            width: 60vw; height: 60vw;
+            max-width: 800px; max-height: 800px;
             background: var(--vanguard-green);
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             border-radius: 50%;
             filter: blur(160px);
-            opacity: 0.1;
+            opacity: 0.08;
             z-index: -1;
             pointer-events: none;
             animation: pulse-deep 8s ease-in-out infinite alternate;
         }
-
         @keyframes pulse-deep {
-            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.05; }
-            100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.12; }
+            0%   { transform: translate(-50%, -50%) scale(1); opacity: 0.05; }
+            100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.1; }
         }
 
-        .donate-title-glow {
-            position: relative;
-        }
-
+        .donate-title-glow { position: relative; }
         .donate-title-glow::after {
             content: "Vanguard";
             position: absolute;
-            left: 0;
-            top: 0;
-            z-index: -1;
+            left: 0; top: 0; z-index: -1;
             background: none;
             -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 30px rgba(79, 248, 40, 0.6);
+            text-shadow: 0 0 30px rgba(79, 248, 40, 0.5);
         }
 
         .donate-icon {
-            width: 100px;
-            height: 100px;
+            width: 96px; height: 96px;
             object-fit: contain;
-            margin-bottom: 24px;
-            filter: drop-shadow(0 20px 20px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 15px rgba(79, 248, 40, 0.2));
+            margin-bottom: 22px;
+            filter: drop-shadow(0 18px 18px rgba(0,0,0,0.7)) drop-shadow(0 0 14px rgba(79,248,40,0.18));
             animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
 
         .donate-section h2 {
-            font-size: 48px;
-            font-weight: 800;
-            letter-spacing: -1px;
-            margin-bottom: 18px;
+            font-size: 46px; font-weight: 800; letter-spacing: -1px;
+            margin-bottom: 16px;
             text-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-
         .donate-desc {
-            font-size: 18px;
-            line-height: 1.7;
+            font-size: 17px; line-height: 1.7;
             color: var(--text-secondary);
-            font-weight: 300;
-            max-width: 580px;
+            font-weight: 400;
+            max-width: 540px;
             margin: 0 auto 40px auto;
         }
-
-        .donate-desc strong {
-            color: #ffffff;
-            font-weight: 600;
-            text-shadow: 0 0 15px rgba(255,255,255,0.2);
-        }
+        .donate-desc strong { color: #fff; font-weight: 600; }
 
         .donate-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            display: flex; flex-direction: column; align-items: center;
             position: relative;
         }
-
         .donate-wrapper::before {
             content: "";
             position: absolute;
-            width: 180px;
-            height: 40px;
+            width: 220px; height: 56px;
             background: var(--vanguard-green);
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             border-radius: 20px;
-            filter: blur(25px);
+            filter: blur(28px);
             opacity: 0;
             transition: opacity 0.3s ease;
-            z-index: -1;
+            z-index: -1; pointer-events: none;
+        }
+        .donate-wrapper:hover::before { opacity: 0.45; }
+
+        .chai-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, #f59e42 0%, #e07b10 100%);
+            color: #fff;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 50px;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            box-shadow: 0 8px 24px rgba(240, 140, 30, 0.35);
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                        box-shadow 0.25s ease, filter 0.25s ease;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .chai-btn::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+            border-radius: inherit;
             pointer-events: none;
         }
-
-        .donate-wrapper:hover::before {
-            opacity: 0.5;
+        .chai-btn:hover {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 14px 32px rgba(240, 140, 30, 0.5);
+            filter: brightness(1.08);
         }
+        .chai-btn svg { flex-shrink: 0; }
 
-        .donate-wrapper a {
+        /* ── Footer ── */
+        footer {
+            border-top: 1px solid var(--border-color);
+            padding: 28px 5%;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        footer a { color: var(--vanguard-green); text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+
+        /* ── Mobile nav ── */
+        .nav-mobile-toggle {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            z-index: 1002;
+        }
+        .nav-mobile-toggle span {
             display: block;
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.3s ease;
+            width: 22px; height: 2px;
+            background: var(--text-main);
+            border-radius: 2px;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .nav-mobile-toggle.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .nav-mobile-toggle.open span:nth-child(2) { opacity: 0; }
+        .nav-mobile-toggle.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+        .nav-mobile-menu {
+            display: none;
+            position: fixed;
+            top: 66px; left: 0; right: 0;
+            background: rgba(6,6,6,0.97);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            flex-direction: column;
+            padding: 12px 0 20px;
+            z-index: 999;
+            transform: translateY(-10px);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .nav-mobile-menu.open {
+            display: flex;
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .nav-mobile-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            padding: 13px 24px;
+            transition: color 0.2s ease, background 0.2s ease;
+        }
+        .nav-mobile-link:hover { color: var(--text-main); background: rgba(255,255,255,0.04); }
+        .nav-mobile-btn {
+            margin: 8px 24px 0;
+            padding: 12px 24px;
+            background: var(--vanguard-green);
+            color: #000 !important;
+            border-radius: 10px;
+            font-weight: 700;
+            text-align: center;
+        }
+        .nav-mobile-btn:hover { background: #3de020 !important; }
+
+        /* ═══════════════════════════════════════
+           SCREENSHOTS SECTION
+        ═══════════════════════════════════════ */
+        .screenshots-section {
+            padding: 100px 5%;
+            text-align: center;
+            position: relative;
         }
 
-        .donate-wrapper a:hover {
-            transform: scale(1.06) translateY(-2px);
-            filter: brightness(1.15);
+        .screenshots-section .section-label {
+            display: inline-block;
+            color: var(--vanguard-green);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            opacity: 0.8;
         }
 
-        .donate-wrapper img {
+        .screenshots-section h2 {
+            font-size: 42px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 14px;
+        }
+
+        .screenshots-section > p {
+            color: var(--text-secondary);
+            font-size: 16px;
+            max-width: 480px;
+            margin: 0 auto 60px;
+        }
+
+        /* ── Grid ── */
+        .screenshots-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: auto auto;
+            gap: 20px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* First screenshot spans full width */
+        .screenshot-card:first-child {
+            grid-column: 1 / -1;
+        }
+
+        .screenshot-card {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            cursor: pointer;
+            transition: border-color 0.35s ease, box-shadow 0.35s ease;
+        }
+
+        .screenshot-card:hover {
+            border-color: rgba(79, 248, 40, 0.35);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.7), 0 0 40px rgba(79,248,40,0.07);
+        }
+
+        /* The SVG mock screenshot */
+        .screenshot-img {
             display: block;
-            border-radius: 8px;
-            filter: drop-shadow(0 15px 15px rgba(0, 0, 0, 0.6));
+            width: 100%;
+            height: auto;
+            transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        @media (max-width: 900px) {
-            .hero {
-                padding-top: 120px;
-            }
-            .hero-title {
-                font-size: 42px;
-            }
-            .donate-section h2 { font-size: 40px; }
-            .donate-desc { font-size: 16px; padding: 0 20px; }
-            .donate-icon { width: 80px; height: 80px; }
+        .screenshot-card:hover .screenshot-img {
+            transform: translateY(-8px) scale(1.02);
         }
 
+        /* Overlay that slides up on hover */
+        .screenshot-overlay {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.6) 60%, transparent 100%);
+            padding: 32px 24px 22px;
+            transform: translateY(100%);
+            transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .screenshot-card:hover .screenshot-overlay {
+            transform: translateY(0);
+        }
+
+        .screenshot-overlay-tag {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+            color: var(--vanguard-green);
+            background: rgba(79,248,40,0.12);
+            border: 1px solid rgba(79,248,40,0.25);
+            padding: 3px 9px;
+            border-radius: 100px;
+            margin-bottom: 8px;
+        }
+
+        .screenshot-overlay-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .screenshot-overlay-desc {
+            font-size: 13px;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.5;
+        }
+
+        /* Permanent subtle bottom label (visible always) */
+        .screenshot-label {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 14px 18px 12px;
+            background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .screenshot-card:hover .screenshot-label {
+            opacity: 0;
+        }
+
+        .screenshot-label-text {
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.75);
+        }
+
+        .screenshot-label-num {
+            font-size: 11px;
+            color: rgba(255,255,255,0.35);
+            font-weight: 500;
+        }
+
+        /* Window chrome bar on top of each screenshot */
+        .screenshot-chrome {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 32px;
+            background: rgba(20,20,20,0.9);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            padding: 0 14px;
+            gap: 7px;
+            pointer-events: none;
+        }
+        .chrome-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+        }
+        .chrome-dot.red   { background: #ff5f57; }
+        .chrome-dot.amber { background: #febc2e; }
+        .chrome-dot.green { background: #28c840; }
+
+        /* ── Screenshots responsive ── */
+        @media (max-width: 760px) {
+            .screenshots-grid {
+                grid-template-columns: 1fr;
+            }
+            .screenshot-card:first-child {
+                grid-column: 1;
+            }
+            .screenshots-section h2 { font-size: 30px; }
+            /* On touch devices, always show overlay */
+            .screenshot-overlay { transform: translateY(0); }
+            .screenshot-label { display: none; }
+        }
+
+        /* ── General responsive ── */
         @media (max-width: 600px) {
-            .nav-links {
-                display: none;
-            }
-            .nav-btn {
-                display: block;
-            }
-            .hero-title {
-                font-size: 36px;
-                letter-spacing: -1px;
-            }
-            .hero-desc {
-                font-size: 16px;
-                padding: 0 10px;
-            }
-            .download-section h2, .donate-section h2 {
-                font-size: 32px;
-            }
-            .dl-card {
-                width: 100%;
-                max-width: 320px;
-            }
+            .nav-links { display: none; }
+            .nav-mobile-toggle { display: flex; }
+            .nav-btn { display: none; }
         }
     </style>
 </head>
@@ -638,7 +939,8 @@
     <div class="music-pattern"></div>
     <div class="neon-blur-circle"></div>
 
-    <nav>
+    <!-- ── Nav: Home → Screenshots → FAQs → Donate → Download ── -->
+    <nav id="main-nav">
         <a href="#" class="nav-brand">
             <div class="nav-logo-icon">
                 <img src="vanguard_player_icon.png" alt="Icon">
@@ -646,21 +948,34 @@
             <span><span class="vanguard-gradient">Vanguard</span> Player</span>
         </a>
         <div class="nav-links">
-            <a href="#" class="nav-link">Home</a>
-            <a href="#donate" class="nav-link">Donate</a>
-            <a href="#download" class="nav-btn">Download</a>
+            <a href="#"             class="nav-link">Home</a>
+            <a href="#screenshots"  class="nav-link">Screenshots</a>
+            <a href="#faqs"         class="nav-link">FAQs</a>
+            <a href="#donate"       class="nav-link">Donate</a>
+            <a href="#download"     class="nav-btn">Download</a>
         </div>
+        <button class="nav-mobile-toggle" id="nav-mobile-toggle" aria-label="Toggle menu">
+            <span></span><span></span><span></span>
+        </button>
     </nav>
+    <div class="nav-mobile-menu" id="nav-mobile-menu">
+        <a href="#"             class="nav-mobile-link">Home</a>
+        <a href="#screenshots"  class="nav-mobile-link">Screenshots</a>
+        <a href="#faqs"         class="nav-mobile-link">FAQs</a>
+        <a href="#donate"       class="nav-mobile-link">Donate</a>
+        <a href="#download"     class="nav-mobile-link nav-mobile-btn">Download</a>
+    </div>
 
+    <!-- ── Hero ── -->
     <header class="hero">
         <div class="hero-content">
             <span class="hero-tag">ZERO ADS. ZERO TRACKING.</span>
             <h1 class="hero-title">Your music, <span>uninterrupted.</span></h1>
             <p class="hero-desc">
-                Experience the ultimate ad-free music player designed for true audio enthusiasts. <strong>Vanguard Player</strong> is meticulously built from the ground up to deliver pure, high-fidelity playback, seamless library management, and a strikingly sleek interface—completely free of distracting clutter, tracking, or paywalls. It’s fully open-source, community-driven, and completely yours to control. Immerse yourself in the music exactly the way it was meant to be heard.
+                Experience the ultimate ad-free music player designed for true audio enthusiasts. <strong>Vanguard Player</strong> is meticulously built from the ground up to deliver pure, high-fidelity playback, seamless library management, and a strikingly sleek interface—completely free of distracting clutter, tracking, or paywalls. Fully open-source, community-driven, and completely yours.
             </p>
             <a href="#download" class="hero-btn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="7 10 12 15 17 10"></polyline>
                     <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -670,6 +985,7 @@
         </div>
     </header>
 
+    <!-- ── Download ── -->
     <section id="download" class="download-section">
         <h2 class="reveal-on-scroll">Choose your platform</h2>
         <p class="reveal-on-scroll delay-100">Vanguard Player is currently available for Windows and Linux architectures.</p>
@@ -680,7 +996,6 @@
                 <div class="dl-title">Windows</div>
                 <div class="dl-format">.exe (x64)</div>
             </a>
-
             <a href="#" class="dl-card reveal-on-scroll delay-300" id="dl-linux">
                 <img class="dl-icon" src="https://upload.wikimedia.org/wikipedia/commons/3/35/Tux.svg" alt="Linux Tux Logo" />
                 <div class="dl-title">Linux</div>
@@ -689,65 +1004,562 @@
         </div>
     </section>
 
+    <div class="section-divider"></div>
+
+    <!-- ══════════════════════════════════════════
+         SCREENSHOTS SECTION
+    ══════════════════════════════════════════ -->
+    <section id="screenshots" class="screenshots-section">
+        <span class="section-label reveal-on-scroll">Preview</span>
+        <h2 class="reveal-on-scroll delay-100">See it in action</h2>
+        <p class="reveal-on-scroll delay-200">A clean, distraction-free interface built for music lovers.</p>
+
+        <div class="screenshots-grid">
+
+            <!-- Screenshot 1 — Main player (full width) -->
+            <div class="screenshot-card reveal-on-scroll delay-100">
+                <div class="screenshot-chrome">
+                    <div class="chrome-dot red"></div>
+                    <div class="chrome-dot amber"></div>
+                    <div class="chrome-dot green"></div>
+                </div>
+                <svg class="screenshot-img" viewBox="0 0 1200 620" xmlns="http://www.w3.org/2000/svg" style="padding-top:32px;background:#0d0d0d;">
+                    <!-- Sidebar -->
+                    <rect x="0" y="0" width="220" height="620" fill="#0a0a0a"/>
+                    <rect x="0" y="0" width="220" height="620" fill="url(#sideGrad)"/>
+                    <defs>
+                        <linearGradient id="sideGrad" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stop-color="#111"/>
+                            <stop offset="100%" stop-color="#0d0d0d"/>
+                        </linearGradient>
+                        <linearGradient id="progressGrad" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stop-color="#4ff828"/>
+                            <stop offset="100%" stop-color="#20d859"/>
+                        </linearGradient>
+                        <linearGradient id="albumGrad" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#1a2a1a"/>
+                            <stop offset="100%" stop-color="#0a180a"/>
+                        </linearGradient>
+                        <filter id="glow1">
+                            <feGaussianBlur stdDeviation="8" result="blur"/>
+                            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                        </filter>
+                    </defs>
+                    <!-- Logo in sidebar -->
+                    <rect x="18" y="20" width="26" height="26" rx="6" fill="#4ff828"/>
+                    <text x="54" y="37" font-family="Inter,sans-serif" font-size="13" font-weight="800" fill="#fff">Vanguard</text>
+                    <!-- Sidebar nav items -->
+                    <rect x="10" y="75" width="200" height="34" rx="8" fill="rgba(79,248,40,0.1)"/>
+                    <text x="42" y="97" font-family="Inter,sans-serif" font-size="13" fill="#4ff828" font-weight="600">Home</text>
+                    <text x="42" y="135" font-family="Inter,sans-serif" font-size="13" fill="#555">Library</text>
+                    <text x="42" y="170" font-family="Inter,sans-serif" font-size="13" fill="#555">Playlists</text>
+                    <text x="42" y="205" font-family="Inter,sans-serif" font-size="13" fill="#555">Downloads</text>
+                    <text x="42" y="240" font-family="Inter,sans-serif" font-size="13" fill="#555">Settings</text>
+                    <!-- Sidebar icons (simple circles) -->
+                    <circle cx="26" cy="93" r="6" fill="#4ff828" opacity="0.8"/>
+                    <circle cx="26" cy="131" r="6" fill="#333"/>
+                    <circle cx="26" cy="166" r="6" fill="#333"/>
+                    <circle cx="26" cy="201" r="6" fill="#333"/>
+                    <circle cx="26" cy="236" r="6" fill="#333"/>
+                    <!-- Sidebar playlist section -->
+                    <text x="18" y="295" font-family="Inter,sans-serif" font-size="10" fill="#444" letter-spacing="1.5">PLAYLISTS</text>
+                    <rect x="10" y="306" width="200" height="1" fill="#1e1e1e"/>
+                    <text x="18" y="330" font-family="Inter,sans-serif" font-size="12" fill="#555">Chill Vibes</text>
+                    <text x="18" y="355" font-family="Inter,sans-serif" font-size="12" fill="#555">Lo-fi Study</text>
+                    <text x="18" y="380" font-family="Inter,sans-serif" font-size="12" fill="#555">Late Night Drive</text>
+                    <text x="18" y="405" font-family="Inter,sans-serif" font-size="12" fill="#555">Workout Mix</text>
+                    <!-- Main content area -->
+                    <rect x="220" y="0" width="980" height="620" fill="#0d0d0d"/>
+                    <!-- Search bar -->
+                    <rect x="250" y="20" width="500" height="36" rx="10" fill="#161616" stroke="#242424" stroke-width="1"/>
+                    <text x="278" y="43" font-family="Inter,sans-serif" font-size="13" fill="#444">Search for songs, artists, albums...</text>
+                    <!-- Now playing card -->
+                    <rect x="250" y="80" width="680" height="260" rx="16" fill="url(#albumGrad)" stroke="#1e1e1e" stroke-width="1"/>
+                    <!-- Album art placeholder -->
+                    <rect x="274" y="104" width="140" height="140" rx="10" fill="#1a3020"/>
+                    <!-- Music note icon in album art -->
+                    <text x="320" y="186" font-family="Inter,sans-serif" font-size="52" fill="#4ff828" opacity="0.4">♪</text>
+                    <!-- Song info -->
+                    <text x="438" y="130" font-family="Inter,sans-serif" font-size="11" fill="#4ff828" letter-spacing="1.5" font-weight="600">NOW PLAYING</text>
+                    <text x="438" y="158" font-family="Inter,sans-serif" font-size="22" fill="#fff" font-weight="800">Midnight Echoes</text>
+                    <text x="438" y="182" font-family="Inter,sans-serif" font-size="14" fill="#666">Neon Drift · Synthwave Collection</text>
+                    <!-- Progress bar -->
+                    <rect x="438" y="204" width="460" height="4" rx="2" fill="#1e1e1e"/>
+                    <rect x="438" y="204" width="190" height="4" rx="2" fill="url(#progressGrad)"/>
+                    <circle cx="628" cy="206" r="7" fill="#4ff828" filter="url(#glow1)"/>
+                    <text x="438" y="226" font-family="Inter,sans-serif" font-size="11" fill="#555">1:54</text>
+                    <text x="876" y="226" font-family="Inter,sans-serif" font-size="11" fill="#555">4:12</text>
+                    <!-- Controls -->
+                    <text x="490" y="270" font-family="Inter,sans-serif" font-size="18" fill="#555">⇄</text>
+                    <text x="542" y="272" font-family="Inter,sans-serif" font-size="22" fill="#888">⏮</text>
+                    <circle cx="624" cy="258" r="24" fill="#4ff828"/>
+                    <text x="612" y="267" font-family="Inter,sans-serif" font-size="22" fill="#000">▶</text>
+                    <text x="656" y="272" font-family="Inter,sans-serif" font-size="22" fill="#888">⏭</text>
+                    <text x="702" y="270" font-family="Inter,sans-serif" font-size="18" fill="#555">↻</text>
+                    <!-- Volume -->
+                    <text x="760" y="270" font-family="Inter,sans-serif" font-size="13" fill="#555">🔊</text>
+                    <rect x="784" y="258" width="100" height="3" rx="2" fill="#1e1e1e"/>
+                    <rect x="784" y="258" width="72" height="3" rx="2" fill="#4ff828" opacity="0.6"/>
+                    <!-- Queue section -->
+                    <text x="952" y="100" font-family="Inter,sans-serif" font-size="11" fill="#444" letter-spacing="1.5">UP NEXT</text>
+                    <rect x="952" y="112" width="218" height="52" rx="10" fill="#141414" stroke="#222" stroke-width="1"/>
+                    <rect x="964" y="122" width="36" height="36" rx="6" fill="#1a2a1a"/>
+                    <text x="980" y="147" font-family="Inter,sans-serif" font-size="14" fill="#4ff828" opacity="0.5">♪</text>
+                    <text x="1010" y="136" font-family="Inter,sans-serif" font-size="12" fill="#ccc" font-weight="600">Starlight Drive</text>
+                    <text x="1010" y="153" font-family="Inter,sans-serif" font-size="11" fill="#555">Solar Fields</text>
+                    <rect x="952" y="172" width="218" height="52" rx="10" fill="#111" stroke="#1a1a1a" stroke-width="1"/>
+                    <rect x="964" y="182" width="36" height="36" rx="6" fill="#1a1a2a"/>
+                    <text x="980" y="207" font-family="Inter,sans-serif" font-size="14" fill="#4488ff" opacity="0.5">♪</text>
+                    <text x="1010" y="196" font-family="Inter,sans-serif" font-size="12" fill="#888" font-weight="600">Neon Rain</text>
+                    <text x="1010" y="213" font-family="Inter,sans-serif" font-size="11" fill="#444">Lazerhawk</text>
+                    <rect x="952" y="232" width="218" height="52" rx="10" fill="#111" stroke="#1a1a1a" stroke-width="1"/>
+                    <rect x="964" y="242" width="36" height="36" rx="6" fill="#2a1a1a"/>
+                    <text x="980" y="267" font-family="Inter,sans-serif" font-size="14" fill="#ff4488" opacity="0.5">♪</text>
+                    <text x="1010" y="256" font-family="Inter,sans-serif" font-size="12" fill="#888" font-weight="600">Electric Dreams</text>
+                    <text x="1010" y="273" font-family="Inter,sans-serif" font-size="11" fill="#444">Perturbator</text>
+                    <!-- Recommended section title -->
+                    <text x="250" y="374" font-family="Inter,sans-serif" font-size="14" fill="#fff" font-weight="700">Recommended for you</text>
+                    <!-- Track list rows -->
+                    <rect x="250" y="388" width="680" height="44" rx="8" fill="rgba(255,255,255,0.02)"/>
+                    <text x="272" y="415" font-family="Inter,sans-serif" font-size="12" fill="#777">1</text>
+                    <rect x="290" y="396" width="30" height="30" rx="5" fill="#1a2a1a"/>
+                    <text x="334" y="415" font-family="Inter,sans-serif" font-size="13" fill="#ccc" font-weight="500">Crystal Skies</text>
+                    <text x="540" y="415" font-family="Inter,sans-serif" font-size="12" fill="#555">Dreamwave</text>
+                    <text x="840" y="415" font-family="Inter,sans-serif" font-size="12" fill="#555">3:47</text>
+                    <rect x="250" y="436" width="680" height="44" rx="8" fill="rgba(255,255,255,0)"/>
+                    <text x="272" y="463" font-family="Inter,sans-serif" font-size="12" fill="#777">2</text>
+                    <rect x="290" y="444" width="30" height="30" rx="5" fill="#1a1a2a"/>
+                    <text x="334" y="463" font-family="Inter,sans-serif" font-size="13" fill="#ccc" font-weight="500">Parallel Universe</text>
+                    <text x="540" y="463" font-family="Inter,sans-serif" font-size="12" fill="#555">Kavinsky</text>
+                    <text x="840" y="463" font-family="Inter,sans-serif" font-size="12" fill="#555">5:02</text>
+                    <rect x="250" y="484" width="680" height="44" rx="8" fill="rgba(255,255,255,0.02)"/>
+                    <text x="272" y="511" font-family="Inter,sans-serif" font-size="12" fill="#777">3</text>
+                    <rect x="290" y="492" width="30" height="30" rx="5" fill="#2a1a1a"/>
+                    <text x="334" y="511" font-family="Inter,sans-serif" font-size="13" fill="#ccc" font-weight="500">After Hours</text>
+                    <text x="540" y="511" font-family="Inter,sans-serif" font-size="12" fill="#555">FM-84</text>
+                    <text x="840" y="511" font-family="Inter,sans-serif" font-size="12" fill="#555">4:28</text>
+                    <rect x="250" y="532" width="680" height="44" rx="8" fill="rgba(255,255,255,0)"/>
+                    <text x="272" y="559" font-family="Inter,sans-serif" font-size="12" fill="#777">4</text>
+                    <rect x="290" y="540" width="30" height="30" rx="5" fill="#1a2a20"/>
+                    <text x="334" y="559" font-family="Inter,sans-serif" font-size="13" fill="#ccc" font-weight="500">Resonance</text>
+                    <text x="540" y="559" font-family="Inter,sans-serif" font-size="12" fill="#555">HOME</text>
+                    <text x="840" y="559" font-family="Inter,sans-serif" font-size="12" fill="#555">3:58</text>
+                    <!-- Green scanline accent -->
+                    <rect x="220" y="0" width="2" height="620" fill="url(#progressGrad)" opacity="0.2"/>
+                </svg>
+                <div class="screenshot-chrome" style="background:rgba(14,14,14,0.95);">
+                    <div class="chrome-dot red"></div>
+                    <div class="chrome-dot amber"></div>
+                    <div class="chrome-dot green"></div>
+                </div>
+                <div class="screenshot-label">
+                    <span class="screenshot-label-text">Main Player</span>
+                    <span class="screenshot-label-num">01 / 03</span>
+                </div>
+                <div class="screenshot-overlay">
+                    <div class="screenshot-overlay-tag">Now Playing</div>
+                    <div class="screenshot-overlay-title">Clean, distraction-free player UI</div>
+                    <div class="screenshot-overlay-desc">Full playback controls, queue management, and smart recommendations — all in one view.</div>
+                </div>
+            </div>
+
+            <!-- Screenshot 2 — Search -->
+            <div class="screenshot-card reveal-on-scroll delay-200">
+                <svg class="screenshot-img" viewBox="0 0 580 420" xmlns="http://www.w3.org/2000/svg" style="padding-top:32px;background:#0d0d0d;">
+                    <defs>
+                        <linearGradient id="pg2" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stop-color="#4ff828"/>
+                            <stop offset="100%" stop-color="#20d859"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- Search bar active -->
+                    <rect x="20" y="18" width="540" height="44" rx="12" fill="#161616" stroke="#4ff828" stroke-width="1.5" stroke-opacity="0.5"/>
+                    <text x="54" y="45" font-family="Inter,sans-serif" font-size="15" fill="#fff" font-weight="500">midnight echoes</text>
+                    <rect x="536" y="28" width="2" height="24" rx="1" fill="#4ff828" opacity="0.8">
+                        <animate attributeName="opacity" values="0.8;0;0.8" dur="1.2s" repeatCount="indefinite"/>
+                    </rect>
+                    <text x="26" y="45" font-family="Inter,sans-serif" font-size="16" fill="#555">⌕</text>
+                    <!-- Search results label -->
+                    <text x="20" y="86" font-family="Inter,sans-serif" font-size="11" fill="#444" letter-spacing="1.5">SEARCH RESULTS</text>
+                    <!-- Result rows -->
+                    <rect x="20" y="96" width="540" height="56" rx="10" fill="rgba(79,248,40,0.06)" stroke="rgba(79,248,40,0.15)" stroke-width="1"/>
+                    <rect x="34" y="108" width="38" height="38" rx="8" fill="#1a3020"/>
+                    <text x="50" y="133" font-family="Inter,sans-serif" font-size="18" fill="#4ff828" opacity="0.6">♪</text>
+                    <text x="84" y="122" font-family="Inter,sans-serif" font-size="14" fill="#fff" font-weight="700">Midnight Echoes</text>
+                    <text x="84" y="140" font-family="Inter,sans-serif" font-size="12" fill="#555">Neon Drift · 4:12</text>
+                    <circle cx="532" cy="124" r="14" fill="#4ff828"/>
+                    <text x="525" y="130" font-family="Inter,sans-serif" font-size="16" fill="#000">▶</text>
+
+                    <rect x="20" y="158" width="540" height="56" rx="10" fill="#111" stroke="#1e1e1e" stroke-width="1"/>
+                    <rect x="34" y="170" width="38" height="38" rx="8" fill="#1a1a2a"/>
+                    <text x="50" y="195" font-family="Inter,sans-serif" font-size="18" fill="#6688ff" opacity="0.6">♪</text>
+                    <text x="84" y="184" font-family="Inter,sans-serif" font-size="14" fill="#ccc" font-weight="600">Midnight Echoes (Remix)</text>
+                    <text x="84" y="202" font-family="Inter,sans-serif" font-size="12" fill="#555">Stardust Revival · 5:38</text>
+
+                    <rect x="20" y="220" width="540" height="56" rx="10" fill="#111" stroke="#1e1e1e" stroke-width="1"/>
+                    <rect x="34" y="232" width="38" height="38" rx="8" fill="#2a1a2a"/>
+                    <text x="50" y="257" font-family="Inter,sans-serif" font-size="18" fill="#ff44aa" opacity="0.6">♪</text>
+                    <text x="84" y="246" font-family="Inter,sans-serif" font-size="14" fill="#ccc" font-weight="600">Midnight (Echoes Edit)</text>
+                    <text x="84" y="264" font-family="Inter,sans-serif" font-size="12" fill="#555">Night Runner · 3:55</text>
+
+                    <rect x="20" y="282" width="540" height="56" rx="10" fill="#111" stroke="#1e1e1e" stroke-width="1"/>
+                    <rect x="34" y="294" width="38" height="38" rx="8" fill="#1a2020"/>
+                    <text x="50" y="319" font-family="Inter,sans-serif" font-size="18" fill="#44ffaa" opacity="0.5">♪</text>
+                    <text x="84" y="308" font-family="Inter,sans-serif" font-size="14" fill="#ccc" font-weight="600">Echoes at Midnight</text>
+                    <text x="84" y="326" font-family="Inter,sans-serif" font-size="12" fill="#555">Chromatics · 6:04</text>
+
+                    <rect x="20" y="344" width="540" height="56" rx="10" fill="#111" stroke="#1e1e1e" stroke-width="1"/>
+                    <rect x="34" y="356" width="38" height="38" rx="8" fill="#2a2010"/>
+                    <text x="50" y="381" font-family="Inter,sans-serif" font-size="18" fill="#ffaa22" opacity="0.5">♪</text>
+                    <text x="84" y="370" font-family="Inter,sans-serif" font-size="14" fill="#ccc" font-weight="600">The Midnight — Echoes</text>
+                    <text x="84" y="388" font-family="Inter,sans-serif" font-size="12" fill="#555">The Midnight · 4:47</text>
+                </svg>
+                <div class="screenshot-chrome">
+                    <div class="chrome-dot red"></div>
+                    <div class="chrome-dot amber"></div>
+                    <div class="chrome-dot green"></div>
+                </div>
+                <div class="screenshot-label">
+                    <span class="screenshot-label-text">Search</span>
+                    <span class="screenshot-label-num">02 / 03</span>
+                </div>
+                <div class="screenshot-overlay">
+                    <div class="screenshot-overlay-tag">Search</div>
+                    <div class="screenshot-overlay-title">Instant YouTube audio search</div>
+                    <div class="screenshot-overlay-desc">Find any track in milliseconds — no account or API key needed.</div>
+                </div>
+            </div>
+
+            <!-- Screenshot 3 — Spotify import -->
+            <div class="screenshot-card reveal-on-scroll delay-300">
+                <svg class="screenshot-img" viewBox="0 0 580 420" xmlns="http://www.w3.org/2000/svg" style="padding-top:32px;background:#0d0d0d;">
+                    <defs>
+                        <linearGradient id="pg3" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stop-color="#4ff828"/>
+                            <stop offset="100%" stop-color="#20d859"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- Import header -->
+                    <text x="20" y="44" font-family="Inter,sans-serif" font-size="20" fill="#fff" font-weight="800">Import Spotify Playlist</text>
+                    <text x="20" y="66" font-family="Inter,sans-serif" font-size="13" fill="#555">Paste your public Spotify playlist link below</text>
+                    <!-- URL input -->
+                    <rect x="20" y="84" width="430" height="42" rx="10" fill="#161616" stroke="#242424" stroke-width="1"/>
+                    <text x="36" y="110" font-family="Inter,sans-serif" font-size="12" fill="#666">https://open.spotify.com/playlist/37i9dQZF1DX...</text>
+                    <rect x="458" y="84" width="102" height="42" rx="10" fill="url(#pg3)"/>
+                    <text x="477" y="110" font-family="Inter,sans-serif" font-size="13" fill="#000" font-weight="700">Import</text>
+                    <!-- Progress -->
+                    <text x="20" y="154" font-family="Inter,sans-serif" font-size="11" fill="#4ff828" letter-spacing="1">FETCHING TRACKS · 18 / 24</text>
+                    <rect x="20" y="162" width="540" height="5" rx="2.5" fill="#1e1e1e"/>
+                    <rect x="20" y="162" width="405" height="5" rx="2.5" fill="url(#pg3)"/>
+                    <!-- Imported tracks -->
+                    <rect x="20" y="182" width="540" height="44" rx="8" fill="rgba(79,248,40,0.04)" stroke="rgba(79,248,40,0.1)" stroke-width="1"/>
+                    <text x="36" y="208" font-family="Inter,sans-serif" font-size="13" fill="#ccc">Blinding Lights</text>
+                    <text x="240" y="208" font-family="Inter,sans-serif" font-size="12" fill="#555">The Weeknd</text>
+                    <text x="490" y="208" font-family="Inter,sans-serif" font-size="11" fill="#4ff828">✓ Matched</text>
+
+                    <rect x="20" y="230" width="540" height="44" rx="8" fill="rgba(79,248,40,0.04)" stroke="rgba(79,248,40,0.1)" stroke-width="1"/>
+                    <text x="36" y="256" font-family="Inter,sans-serif" font-size="13" fill="#ccc">As It Was</text>
+                    <text x="240" y="256" font-family="Inter,sans-serif" font-size="12" fill="#555">Harry Styles</text>
+                    <text x="490" y="256" font-family="Inter,sans-serif" font-size="11" fill="#4ff828">✓ Matched</text>
+
+                    <rect x="20" y="278" width="540" height="44" rx="8" fill="rgba(79,248,40,0.04)" stroke="rgba(79,248,40,0.1)" stroke-width="1"/>
+                    <text x="36" y="304" font-family="Inter,sans-serif" font-size="13" fill="#ccc">Heat Waves</text>
+                    <text x="240" y="304" font-family="Inter,sans-serif" font-size="12" fill="#555">Glass Animals</text>
+                    <text x="490" y="304" font-family="Inter,sans-serif" font-size="11" fill="#4ff828">✓ Matched</text>
+
+                    <rect x="20" y="326" width="540" height="44" rx="8" fill="#111" stroke="#1e1e1e" stroke-width="1"/>
+                    <text x="36" y="352" font-family="Inter,sans-serif" font-size="13" fill="#777">Stay</text>
+                    <text x="240" y="352" font-family="Inter,sans-serif" font-size="12" fill="#444">The Kid LAROI</text>
+                    <text x="476" y="352" font-family="Inter,sans-serif" font-size="11" fill="#555">⟳ Fetching...</text>
+
+                    <rect x="20" y="374" width="540" height="30" rx="8" fill="#0f0f0f"/>
+                    <text x="36" y="394" font-family="Inter,sans-serif" font-size="12" fill="#444">Anti-Hero · Taylor Swift</text>
+                </svg>
+                <div class="screenshot-chrome">
+                    <div class="chrome-dot red"></div>
+                    <div class="chrome-dot amber"></div>
+                    <div class="chrome-dot green"></div>
+                </div>
+                <div class="screenshot-label">
+                    <span class="screenshot-label-text">Spotify Import</span>
+                    <span class="screenshot-label-num">03 / 03</span>
+                </div>
+                <div class="screenshot-overlay">
+                    <div class="screenshot-overlay-tag">Import</div>
+                    <div class="screenshot-overlay-title">Bring your Spotify playlists over</div>
+                    <div class="screenshot-overlay-desc">Paste a Spotify link and Vanguard auto-matches every track. Your curation, your way.</div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- ══════════════════════════════════════════
+         FAQ SECTION
+    ══════════════════════════════════════════ -->
+    <section id="faqs" class="faq-section">
+        <span class="faq-label reveal-on-scroll">Support</span>
+        <h2 class="reveal-on-scroll delay-100">Frequently Asked Questions</h2>
+        <p class="reveal-on-scroll delay-200">Everything you need to know about Vanguard Player.</p>
+
+        <!-- ── General & Features ── -->
+        <div class="faq-category reveal-on-scroll delay-100">
+            <div class="faq-category-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                General &amp; Features
+            </div>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        Is Vanguard Player completely free?
+                        <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
+                    </button>
+                    <div class="faq-answer" role="region">
+                        <div class="faq-answer-inner">Yes! Vanguard Player is 100% free and open-source. There are absolutely no paywalls, premium tiers, or hidden fees.</div>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        Where does the music come from?
+                        <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
+                    </button>
+                    <div class="faq-answer" role="region">
+                        <div class="faq-answer-inner">Vanguard Player searches and streams audio directly from YouTube. However, it completely bypasses the video rendering, giving you a lightweight, high-fidelity audio stream without eating up your computer's bandwidth or resources.</div>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        Do I need a YouTube Premium account or API key?
+                        <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
+                    </button>
+                    <div class="faq-answer" role="region">
+                        <div class="faq-answer-inner">Not at all. Vanguard Player works completely independently. You do not need to log in to any account, configure API keys, or have a premium subscription to enjoy ad-free listening.</div>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        Can I download songs to listen offline?
+                        <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
+                    </button>
+                    <div class="faq-answer" role="region">
+                        <div class="faq-answer-inner">Yes! You can extract and download any track directly to your local storage as an MP3. You can even customize the audio extraction quality (High, Medium, Low) and pick your exact download destination in the app settings.</div>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        Can I import my Spotify playlists?
+                        <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
+                    </button>
+                    <div class="faq-answer" role="region">
+                        <div class="faq-answer-inner">Yes! You can easily import your existing Spotify playlists directly into Vanguard Player. Simply provide your Spotify playlist link, and the app will automatically fetch and match the tracks so you don't lose your carefully curated libraries.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Installation & System Requirements ── -->
+        <div class="faq-category reveal-on-scroll delay-200">
+            <div class="faq-category-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                Installation &amp; System Requirements
+            </div>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        What operating systems are supported?
+                        <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
+                    </button>
+                    <div class="faq-answer" role="region">
+                        <div class="faq-answer-inner">Currently, Vanguard Player is fully optimized and compiled for <strong style="color:#fff">Windows (.exe)</strong> and <strong style="color:#fff">Linux (.AppImage)</strong>.</div>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        Do I need to install external tools like Python, FFmpeg, or mpv?
+                        <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
+                    </button>
+                    <div class="faq-answer" role="region">
+                        <div class="faq-answer-inner">No! Vanguard Player is built to be completely portable. The required audio engines (mpv) and extractors (yt-dlp, ffmpeg) are bundled directly into the app. It works perfectly right out of the box with zero setup required.</div>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        Does it require an internet connection?
+                        <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
+                    </button>
+                    <div class="faq-answer" role="region">
+                        <div class="faq-answer-inner">Yes, you need an active internet connection to search for and stream new music. However, any tracks you have downloaded using the built-in MP3 extractor can be played offline using your OS's native media player.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Privacy & Technical ── -->
+        <div class="faq-category reveal-on-scroll delay-300">
+            <div class="faq-category-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Privacy &amp; Technical
+            </div>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        Does Vanguard Player track my listening habits?
+                        <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
+                    </button>
+                    <div class="faq-answer" role="region">
+                        <div class="faq-answer-inner">No. Vanguard Player is built for absolute privacy. There is zero telemetry, zero tracking, and zero ads. Your data, playlists, and listening habits stay entirely locally on your own machine.</div>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        How is the app so fast and lightweight?
+                        <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
+                    </button>
+                    <div class="faq-answer" role="region">
+                        <div class="faq-answer-inner">Instead of using heavy web wrappers like Electron, Vanguard Player is built using <strong style="color:#fff">Tauri and Rust</strong>. This allows the app to interact directly with your operating system, keeping RAM and CPU usage incredibly low while maintaining a strikingly sleek React UI.</div>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        What technologies power the audio engine?
+                        <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
+                    </button>
+                    <div class="faq-answer" role="region">
+                        <div class="faq-answer-inner">Under the hood, it utilizes <strong style="color:#fff">yt-dlp</strong> for lightning-fast, secure audio scraping, and <strong style="color:#fff">mpv</strong> as the highly versatile background audio engine, communicating seamlessly via Unix IPC sockets.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Community & Support ── -->
+        <div class="faq-category reveal-on-scroll delay-100">
+            <div class="faq-category-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Community &amp; Support
+            </div>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        I found a bug or have a feature request. Where do I go?
+                        <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
+                    </button>
+                    <div class="faq-answer" role="region">
+                        <div class="faq-answer-inner">Since Vanguard Player is community-driven, the best place to report bugs or suggest new features is on our <a href="https://github.com/ishmweet" target="_blank" rel="noopener">GitHub Issues page</a>. We actively monitor it!</div>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false">
+                        How can I support the development of Vanguard Player?
+                        <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
+                    </button>
+                    <div class="faq-answer" role="region">
+                        <div class="faq-answer-inner">If you enjoy the ad-free experience, you can support the project by leaving a ⭐ Star on our <a href="https://github.com/ishmweet" target="_blank" rel="noopener">GitHub repository</a>, sharing the app with friends, or buying the developer a chai through our <a href="#donate">Support page</a>!</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- ── Donate ── -->
     <section id="donate" class="donate-section">
         <img src="vanguard_player_icon.png" alt="Vanguard Player Icon" class="donate-icon reveal-on-scroll">
         <h2 class="reveal-on-scroll delay-100"><span class="vanguard-gradient donate-title-glow">Vanguard</span> Player</h2>
-        
         <p class="donate-desc reveal-on-scroll delay-200">
             If you enjoy the project, consider supporting its development. It helps bring new features, improvements, and keeps the project alive.
         </p>
-
         <div class="donate-wrapper reveal-on-scroll delay-300">
-            <a href="https://buymeachai.ezee.li/vanguard_dev" target="_blank" rel="noopener noreferrer">
-                <img src="https://buymeachai.ezee.li/assets/images/buymeachai-button.png" alt="Buy Me A Chai" width="200">
+            <a href="https://buymeachai.ezee.li/vanguard_dev" target="_blank" rel="noopener noreferrer" class="chai-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+                    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+                    <line x1="6" y1="1" x2="6" y2="4"/>
+                    <line x1="10" y1="1" x2="10" y2="4"/>
+                    <line x1="14" y1="1" x2="14" y2="4"/>
+                </svg>
+                Buy Me a Chai
             </a>
         </div>
     </section>
 
+    <footer>
+        <p>© <span id="footer-year"></span> Vanguard Player · Open source, always · <a href="https://github.com/ishmweet" target="_blank" rel="noopener">GitHub</a></p>
+    </footer>
+
     <script>
-        function initAnimationsAndDetection() {
-            const observerOptions = {
-                root: null,
-                rootMargin: '0px',
-                threshold: 0.15
-            };
+        // ── Scroll reveal ──
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) entry.target.classList.add('is-visible');
+                else entry.target.classList.remove('is-visible');
+            });
+        }, { threshold: 0.12 });
 
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('is-visible');
-                    } else {
-                        entry.target.classList.remove('is-visible');
-                    }
-                });
-            }, observerOptions);
+        document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
 
-            const elementsToReveal = document.querySelectorAll('.reveal-on-scroll');
-            elementsToReveal.forEach(el => observer.observe(el));
+        // ── Nav scroll class ──
+        const nav = document.getElementById('main-nav');
+        window.addEventListener('scroll', () => {
+            nav.classList.toggle('scrolled', window.scrollY > 20);
+        }, { passive: true });
 
-            const userAgent = navigator.userAgent.toLowerCase();
-            const winCard = document.getElementById('dl-windows');
-            const linuxCard = document.getElementById('dl-linux');
-            
-            const isMobile = /mobile|android|iphone|ipad|ipod|windows phone/i.test(userAgent) || window.innerWidth <= 768;
+        // ── OS detection ──
+        const ua = navigator.userAgent.toLowerCase();
+        const winCard = document.getElementById('dl-windows');
+        const linuxCard = document.getElementById('dl-linux');
+        const isMobile = /mobile|android|iphone|ipad|ipod|windows phone/i.test(ua) || window.innerWidth <= 768;
 
-            if (winCard && linuxCard && !isMobile) {
-                if (userAgent.indexOf("windows") !== -1 || userAgent.indexOf("win32") !== -1) {
-                    winCard.classList.add('highlight-os');
-                    linuxCard.classList.add('dimmed-os');
-                } 
-                else if (userAgent.indexOf("linux") !== -1 || userAgent.indexOf("x11") !== -1) {
-                    linuxCard.classList.add('highlight-os');
-                    winCard.classList.add('dimmed-os');
-                }
+        if (winCard && linuxCard && !isMobile) {
+            if (ua.includes('windows') || ua.includes('win32')) {
+                winCard.classList.add('highlight-os');
+                linuxCard.classList.add('dimmed-os');
+            } else if (ua.includes('linux') || ua.includes('x11')) {
+                linuxCard.classList.add('highlight-os');
+                winCard.classList.add('dimmed-os');
             }
         }
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initAnimationsAndDetection);
-        } else {
-            initAnimationsAndDetection();
-        }
+        // ── Mobile nav toggle ──
+        const mobileToggle = document.getElementById('nav-mobile-toggle');
+        const mobileMenu   = document.getElementById('nav-mobile-menu');
+        mobileToggle.addEventListener('click', () => {
+            const open = mobileMenu.classList.toggle('open');
+            mobileToggle.classList.toggle('open', open);
+        });
+        // Close menu when a link is clicked
+        document.querySelectorAll('.nav-mobile-link').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.remove('open');
+                mobileToggle.classList.remove('open');
+            });
+        });
+
+        // ── Auto year ──
+        document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+        // ── FAQ accordion ──
+        document.querySelectorAll('.faq-question').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const item = btn.closest('.faq-item');
+                const isOpen = item.classList.contains('open');
+
+                // Close all
+                document.querySelectorAll('.faq-item.open').forEach(openItem => {
+                    openItem.classList.remove('open');
+                    openItem.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+                });
+
+                // Open clicked if it was closed
+                if (!isOpen) {
+                    item.classList.add('open');
+                    btn.setAttribute('aria-expanded', 'true');
+                }
+            });
+        });
     </script>
 
 </body>
