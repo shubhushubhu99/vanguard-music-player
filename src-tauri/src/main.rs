@@ -122,6 +122,249 @@ async fn search_youtube(query: String) -> Result<String, String> {
     .map_err(|e| e.to_string())?
 }
 
+// ── Spotify playlist extractor ───────────────────────────────────────────────
+// Multi-method approach for unlimited tracks:
+//   Method A: yt-dlp --flat-playlist (works on public playlists, unlimited)
+//   Method B: Embed page __NEXT_DATA__ + paginate via Spotify's internal API
+//             using the accessToken from the page itself
+
+fn sp_curl(url: &str, headers: &[(&str, &str)]) -> Result<String, String> {
+    let mut args: Vec<String> = vec![
+        "-s".to_string(), "-L".to_string(),
+        "--max-time".to_string(), "25".to_string(),
+        "--compressed".to_string(),
+        "-A".to_string(),
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36".to_string(),
+        "-H".to_string(), "Accept-Language: en-US,en;q=0.9".to_string(),
+        "-H".to_string(), "Accept: */*".to_string(),
+        "-H".to_string(), "sec-fetch-dest: empty".to_string(),
+        "-H".to_string(), "sec-fetch-mode: cors".to_string(),
+    ];
+    for (k, v) in headers {
+        args.push("-H".to_string());
+        args.push(format!("{}: {}", k, v));
+    }
+    args.push(url.to_string());
+    let out = Command::new("curl").args(&args).output()
+        .map_err(|e| format!("curl: {}", e))?;
+    Ok(String::from_utf8_lossy(&out.stdout).to_string())
+}
+
+fn extract_next_data(html: &str) -> Option<Value> {
+    let marker = r#"<script id="__NEXT_DATA__" type="application/json">"#;
+    let start = html.find(marker)? + marker.len();
+    let end = html[start..].find("</script>")?;
+    serde_json::from_str(&html[start..start+end]).ok()
+}
+
+// Method A: yt-dlp flat playlist extraction — unlimited, most reliable
+fn method_ytdlp(playlist_id: &str) -> Result<(String, Vec<(String, String)>), String> {
+    let url = format!("https://open.spotify.com/playlist/{}", playlist_id);
+
+    // First get playlist title
+    let title_out = Command::new("yt-dlp")
+        .args([
+            "--flat-playlist", "--no-warnings", "--no-check-certificates",
+            "--playlist-items", "1",
+            "--print", "playlist_title",
+            &url,
+        ])
+        .output()
+        .map_err(|e| format!("yt-dlp: {}", e))?;
+    let playlist_name = String::from_utf8_lossy(&title_out.stdout).trim().to_string();
+    let playlist_name = if playlist_name.is_empty() || playlist_name == "NA" {
+        String::new()
+    } else {
+        playlist_name
+    };
+
+    // Get all tracks: title====artist
+    let out = Command::new("yt-dlp")
+        .args([
+            "--flat-playlist", "--no-warnings", "--no-check-certificates",
+            "--print", "%(track)s====%(artist)s",
+            &url,
+        ])
+        .output()
+        .map_err(|e| format!("yt-dlp: {}", e))?;
+
+    let raw = String::from_utf8_lossy(&out.stdout).to_string();
+    let mut tracks: Vec<(String, String)> = Vec::new();
+
+    for line in raw.lines() {
+        if line.contains("====") {
+            let mut parts = line.splitn(2, "====");
+            let title = parts.next().unwrap_or("").trim().to_string();
+            let artist = parts.next().unwrap_or("").trim().to_string();
+            if !title.is_empty() && title != "NA" {
+                tracks.push((title, artist));
+            }
+        }
+    }
+
+    if tracks.is_empty() {
+        return Err("yt-dlp returned no tracks".to_string());
+    }
+
+    Ok((playlist_name, tracks))
+}
+
+// Method B: Embed page + Spotify internal API pagination
+fn method_embed(playlist_id: &str) -> Result<(String, Vec<(String, String)>), String> {
+    let embed_url = format!(
+        "https://open.spotify.com/embed/playlist/{}?utm_source=oembed", playlist_id
+    );
+    let html = sp_curl(&embed_url, &[])?;
+
+    let data = extract_next_data(&html)
+        .ok_or("Could not parse embed page — playlist may be private")?;
+
+    let entity = &data["props"]["pageProps"]["state"]["data"]["entity"];
+    let playlist_name = entity["name"].as_str().unwrap_or("").to_string();
+
+    // Get access token from the embed page
+    let token = data["props"]["pageProps"]["accessToken"]
+        .as_str()
+        .or_else(|| data["props"]["pageProps"]["state"]["data"]["accessToken"].as_str())
+        .map(|s| s.to_string());
+
+    // Parse initial trackList from embed page
+    let mut all_tracks: Vec<(String, String)> = Vec::new();
+    if let Some(list) = entity["trackList"].as_array() {
+        for item in list {
+            let title = item["title"].as_str()
+                .or_else(|| item["name"].as_str())
+                .unwrap_or("").trim().to_string();
+            if title.is_empty() { continue; }
+            let artist = item["subtitle"].as_str().unwrap_or("").trim().to_string();
+            all_tracks.push((title, artist));
+        }
+    }
+
+    // Paginate with internal API if we have a token
+    if let Some(token) = token {
+        let auth = format!("Bearer {}", token);
+        let mut offset = all_tracks.len();
+
+        // Try multiple known working hashes for the fetchPlaylist operation
+        let hashes = [
+            "149ed840700e8f9b19e48b59e5d24cc64d98f4e0b4f09d0c6ccc9f91c0b96e6c",
+            "3ce876571c53bbc72f94a9ff7b52e48f79edd2f8c6cfab73b75f0f70c4c1e29d",
+        ];
+
+        'outer: for hash in &hashes {
+            let mut page_offset = offset;
+            loop {
+                let vars = format!(
+                    r#"{{"uri":"spotify:playlist:{}","offset":{},"limit":100}}"#,
+                    playlist_id, page_offset
+                );
+                let exts = format!(
+                    r#"{{"persistedQuery":{{"version":1,"sha256Hash":"{}"}}}}"#,
+                    hash
+                );
+                let api_url = format!(
+                    "https://api-partner.spotify.com/pathfinder/v1/query?operationName=fetchPlaylist&variables={}&extensions={}",
+                    urlencoding_simple(&vars),
+                    urlencoding_simple(&exts)
+                );
+
+                let resp = sp_curl(&api_url, &[
+                    ("Authorization", auth.as_str()),
+                    ("Accept", "application/json"),
+                    ("spotify-app-version", "1.2.46.25"),
+                    ("app-platform", "WebPlayer"),
+                ])?;
+
+                let json: Value = match serde_json::from_str(&resp) {
+                    Ok(v) => v,
+                    Err(_) => break,
+                };
+
+                // If error or no data, this hash doesn't work — try next
+                if json["errors"].is_array() || json["data"].is_null() {
+                    break;
+                }
+
+                let items = match json["data"]["playlistV2"]["content"]["items"].as_array() {
+                    Some(i) if !i.is_empty() => i.clone(),
+                    _ => break 'outer, // hash works but no more pages
+                };
+
+                let before = all_tracks.len();
+                for item in &items {
+                    let d = &item["itemV2"]["data"];
+                    let title = d["name"].as_str().unwrap_or("").trim().to_string();
+                    if title.is_empty() { continue; }
+                    let artist = d["artists"]["items"]
+                        .as_array()
+                        .and_then(|a| a.first())
+                        .and_then(|a| a["profile"]["name"].as_str())
+                        .unwrap_or("").trim().to_string();
+                    all_tracks.push((title, artist));
+                }
+
+                if all_tracks.len() == before { break 'outer; }
+                page_offset = all_tracks.len();
+
+                let total = json["data"]["playlistV2"]["content"]["totalCount"]
+                    .as_i64().unwrap_or(0);
+                if page_offset as i64 >= total { break 'outer; }
+            }
+        }
+    }
+
+    if all_tracks.is_empty() {
+        return Err("No tracks found".to_string());
+    }
+    Ok((playlist_name, all_tracks))
+}
+
+// Minimal percent-encoding for JSON strings in URLs
+fn urlencoding_simple(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() * 3);
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char);
+            }
+            _ => {
+                out.push('%');
+                out.push_str(&format!("{:02X}", b));
+            }
+        }
+    }
+    out
+}
+
+#[tauri::command]
+async fn search_spotify_playlist(url: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let playlist_id = url
+            .split("/playlist/")
+            .nth(1).unwrap_or("")
+            .split(|c: char| c == '?' || c == '#')
+            .next().unwrap_or("").trim().to_string();
+
+        if playlist_id.is_empty() {
+            return Err("Could not parse playlist ID from URL".to_string());
+        }
+
+        // Try Method A first (yt-dlp) — handles any playlist size
+        let result = method_ytdlp(&playlist_id)
+            .or_else(|_| method_embed(&playlist_id))?;
+
+        let (playlist_name, all_tracks) = result;
+
+        let mut output = format!("PLAYLIST:{}\n", playlist_name);
+        for (title, artist) in all_tracks {
+            output.push_str(&format!("{}===={}\n", title, artist));
+        }
+        Ok(output)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
 // ── Prefetch ──────────────────────────────────────────────────────────────────
 // Fires-and-forgets in a background task. Stores the direct stream URL so
 // play_audio can skip the yt-dlp resolve step entirely.
@@ -1327,11 +1570,16 @@ async fn install_dependencies(_app_handle: tauri::AppHandle) -> Result<InstallRe
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
+#[tauri::command]
+fn ping() -> String { "pong".to_string() }
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
+            // Debug
+            ping,
             // Dependencies
             check_dependencies,
             install_dependencies,
@@ -1339,6 +1587,7 @@ fn main() {
             update_yt_dlp,
             // Search & prefetch
             search_youtube,
+                search_spotify_playlist,
             prefetch_track,
             // Playback
             play_audio,

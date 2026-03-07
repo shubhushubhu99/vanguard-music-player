@@ -3,11 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vanguard Project - Open Source Music Player</title>
+    <title>Vanguard Player — Open Source Music Player</title>
+
+    <!-- ── SEO ── -->
+    <meta name="description" content="Vanguard Player is a free, open-source, ad-free music player for Windows and Linux. High-fidelity playback, seamless library management, zero tracking.">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://vanguardplayer.app/">
+
+    <!-- ── OpenGraph (Discord, Facebook, Slack, etc.) ── -->
+    <meta property="og:type"        content="website">
+    <meta property="og:url"         content="https://vanguardplayer.app/">
+    <meta property="og:title"       content="Vanguard Player — Open Source Music Player">
+    <meta property="og:description" content="Ad-free, open-source music player for Windows and Linux. Zero tracking, zero paywalls. Just your music.">
+    <meta property="og:image"       content="/vanguardplayer-preview.png">
+    <meta property="og:image:width"  content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name"   content="Vanguard Player">
+
+    <!-- ── Twitter / X Card ── -->
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:url"         content="https://vanguardplayer.app/">
+    <meta name="twitter:title"       content="Vanguard Player — Open Source Music Player">
+    <meta name="twitter:description" content="Ad-free, open-source music player for Windows and Linux. Zero tracking, zero paywalls. Just your music.">
+    <meta name="twitter:image"       content="https://vanguardplayer.app/preview.png">
+
+    <!-- ── Favicon ── -->
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%234ff828'/%3E%3Cg transform='translate(3, 3)'%3E%3Cpath d='M9 18V5l12-2v13M9 9l12-2' stroke='%23000' stroke-width='2.5' fill='none'/%3E%3Ccircle cx='6' cy='18' r='3.2' fill='%23000'/%3E%3Ccircle cx='18' cy='16' r='3.2' fill='%23000'/%3E%3C/g%3E%3C/svg%3E" type="image/svg+xml">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&display=swap" rel="stylesheet">
+
+    <!-- ── Noscript: make typewriter title visible if JS is disabled or slow ── -->
+    <noscript>
+        <style>
+            #typewriter { visibility: visible !important; }
+            #tw-cursor  { display: none !important; }
+            .reveal-on-scroll {
+                opacity: 1 !important;
+                transform: none !important;
+            }
+        </style>
+    </noscript>
     
     <style>
         :root {
@@ -87,6 +124,19 @@
         .delay-200 { transition-delay: 0.2s; }
         .delay-300 { transition-delay: 0.3s; }
         .delay-400 { transition-delay: 0.4s; }
+
+        /* ── Scroll progress bar ── */
+        #scroll-progress {
+            position: fixed;
+            top: 0; left: 0;
+            width: 0%;
+            height: 2px;
+            background: linear-gradient(90deg, #4ff828, #20d859);
+            z-index: 1001;
+            box-shadow: 0 0 8px rgba(79, 248, 40, 0.6);
+            transition: width 0.08s linear;
+            pointer-events: none;
+        }
 
         /* ── Nav ── */
         nav {
@@ -190,7 +240,8 @@
             border-radius: 8px;
             font-weight: 700;
             font-size: 14px;
-            transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease, color 0.3s ease;
+            transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease,
+                        background-color 0.3s ease, color 0.3s ease;
             box-shadow: 0 0 14px rgba(79, 248, 40, 0.25);
             position: relative;
             overflow: hidden;
@@ -357,67 +408,148 @@
             font-size: 42px; font-weight: 800; margin-bottom: 14px;
             letter-spacing: -1px;
         }
-        .download-section p {
+        .download-section > p {
             color: var(--text-secondary);
             font-size: 17px;
             margin-bottom: 52px;
             max-width: 480px;
         }
-        .download-cards {
-            display: flex; gap: 22px; flex-wrap: wrap; justify-content: center;
+        .download-buttons {
+            display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+            align-items: flex-start;
         }
-        .dl-card {
-            background: linear-gradient(145deg, #111, #0a0a0a);
-            border: 1px solid var(--border-color);
-            border-radius: 18px;
-            padding: 32px 44px;
-            width: 280px;
-            display: flex; flex-direction: column; align-items: center;
-            text-decoration: none;
-            color: var(--text-main);
+
+        /* ── Shared button-dropdown wrapper ── */
+        .dl-btn-wrap {
             position: relative;
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-                        border-color 0.3s ease, box-shadow 0.3s ease;
+            width: 260px;
         }
-        .dl-card:hover {
-            transform: translateY(-6px);
-            border-color: var(--border-hover);
-            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.7), 0 0 30px rgba(79, 248, 40, 0.08);
-        }
-        .dl-card.is-visible.highlight-os {
-            border-color: rgba(79,248,40,0.5);
-            box-shadow: 0 12px 32px rgba(0,0,0,0.7), 0 0 20px rgba(79,248,40,0.12);
-            transform: translateY(-6px) scale(1.02);
-            z-index: 2;
-        }
-        .dl-card.highlight-os::before {
-            content: "RECOMMENDED";
-            position: absolute;
-            top: -12px;
-            background: var(--vanguard-green);
+
+        /* ── Main green trigger button ── */
+        .dl-btn-trigger {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background-color: var(--vanguard-green);
             color: #000;
-            font-size: 10px; font-weight: 800;
-            padding: 4px 12px; border-radius: 20px;
-            letter-spacing: 0.8px;
-            box-shadow: 0 4px 12px rgba(79, 248, 40, 0.35);
+            text-decoration: none;
+            padding: 0 20px;
+            height: 54px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 15px;
+            white-space: nowrap;
+            cursor: pointer;
+            border: none;
+            font-family: 'Inter', sans-serif;
+            box-shadow: 0 6px 20px rgba(79, 248, 40, 0.3);
+            transition: background-color 0.2s ease, box-shadow 0.2s ease, border-radius 0.25s ease;
+            user-select: none;
+            position: relative;
+            z-index: 2;
+            box-sizing: border-box;
         }
-        .dl-card.is-visible.dimmed-os {
-            opacity: 0.35; transform: scale(0.95); filter: grayscale(60%); z-index: 1;
+        .dl-btn-trigger:hover {
+            background-color: #5dfc30;
+            box-shadow: 0 8px 28px rgba(79, 248, 40, 0.45);
         }
-        .dl-card.is-visible.dimmed-os:hover {
-            opacity: 1; transform: translateY(-5px) scale(1);
-            filter: grayscale(0%);
-            border-color: var(--border-hover);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.7), 0 0 28px rgba(79,248,40,0.08);
+        .dl-btn-wrap.open .dl-btn-trigger {
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 4px 12px rgba(79, 248, 40, 0.2);
         }
-        .dl-icon { width: 58px; height: 58px; margin-bottom: 18px; transition: filter 0.3s ease, transform 0.3s ease; }
-        .dl-card:hover img.dl-icon,
-        .dl-card.highlight-os img.dl-icon { filter: drop-shadow(0 0 14px rgba(79,248,40,0.75)); transform: scale(1.06); }
-        .dl-title { font-size: 19px; font-weight: 700; margin-bottom: 8px; }
-        .dl-format {
-            font-size: 12px; color: var(--text-secondary);
-            background: rgba(255,255,255,0.05);
-            padding: 4px 10px; border-radius: 20px;
+        .dl-btn-trigger-text {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .dl-btn-trigger-text img {
+            width: 22px; height: 22px;
+            object-fit: contain;
+        }
+
+        .dl-btn-arrow {
+            display: inline-flex;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            flex-shrink: 0;
+        }
+        .dl-btn-wrap.open .dl-btn-arrow {
+            transform: rotate(180deg);
+        }
+
+        /* ── Windows direct link (no dropdown) ── */
+        .dl-btn-trigger.dl-btn-direct {
+            border-radius: 12px;
+            justify-content: center;
+            gap: 10px;
+        }
+        .dl-btn-trigger.dl-btn-direct:hover {
+            border-radius: 12px;
+        }
+
+        /* ── Dropdown panel ── */
+        .dl-dropdown-panel {
+            width: 100%;
+            max-height: 0;
+            overflow: hidden;
+            background: #0e0e0e;
+            border: 1px solid var(--border-color);
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            z-index: 1;
+        }
+        .dl-btn-wrap.open .dl-dropdown-panel {
+            max-height: 200px;
+            border-color: rgba(79, 248, 40, 0.25);
+        }
+
+        .dl-dropdown-list {
+            padding: 8px 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .dl-drop-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 11px 14px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: rgba(255,255,255,0.75);
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.18s ease, color 0.18s ease;
+        }
+        .dl-drop-item:hover {
+            background: rgba(79, 248, 40, 0.08);
+            color: #fff;
+        }
+        .dl-drop-item-label {
+            display: flex; align-items: center; gap: 10px;
+        }
+        .dl-drop-item-icon {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            flex-shrink: 0;
+            transition: background 0.18s;
+        }
+        .dl-drop-item:hover .dl-drop-item-icon {
+            background: var(--vanguard-green);
+        }
+        .dl-drop-item-arch {
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.3);
+            transition: color 0.18s;
+        }
+        .dl-drop-item:hover .dl-drop-item-arch {
+            color: var(--vanguard-green);
         }
 
         /* ═══════════════════════════════════════
@@ -969,6 +1101,7 @@
         </svg>
     </a>
 
+    <div id="scroll-progress"></div>
     <div class="music-pattern"></div>
     <div class="neon-blur-circle"></div>
 
@@ -1022,18 +1155,59 @@
     <section id="download" class="download-section">
         <h2 class="reveal-on-scroll">Choose your platform</h2>
         <p class="reveal-on-scroll delay-100">Vanguard Player is currently available for Windows and Linux architectures.</p>
-        
-        <div class="download-cards">
-            <a href="#" class="dl-card reveal-on-scroll delay-200" id="dl-windows">
-                <img class="dl-icon" src="https://upload.wikimedia.org/wikipedia/commons/8/87/Windows_logo_-_2021.svg" alt="Windows Logo" />
-                <div class="dl-title">Windows</div>
-                <div class="dl-format">.exe (x64)</div>
-            </a>
-            <a href="#" class="dl-card reveal-on-scroll delay-300" id="dl-linux">
-                <img class="dl-icon" src="https://upload.wikimedia.org/wikipedia/commons/3/35/Tux.svg" alt="Linux Tux Logo" />
-                <div class="dl-title">Linux</div>
-                <div class="dl-format">.AppImage (x64)</div>
-            </a>
+
+        <div class="download-buttons reveal-on-scroll delay-200">
+
+            <!-- Windows direct button -->
+            <div class="dl-btn-wrap" id="dl-windows-wrap">
+                <a href="#" class="dl-btn-trigger dl-btn-direct" id="dl-windows">
+                    <span class="dl-btn-trigger-text">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/Windows_logo_-_2021.svg" alt="Windows" />
+                        Download for Windows
+                    </span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </a>
+                <div style="text-align:center; margin-top:9px; font-size:12px; color:var(--text-secondary);">.exe (x64)</div>
+            </div>
+
+            <!-- Linux dropdown button -->
+            <div class="dl-btn-wrap" id="dl-linux-wrap">
+                <button class="dl-btn-trigger" id="dl-linux" aria-expanded="false" aria-haspopup="listbox">
+                    <span class="dl-btn-trigger-text">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/3/35/Tux.svg" alt="Linux" />
+                        Download for Linux
+                    </span>
+                    <span class="dl-btn-arrow">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </span>
+                </button>
+                <div class="dl-dropdown-panel" id="linux-dropdown" role="listbox">
+                    <div class="dl-dropdown-list">
+                        <a href="#" class="dl-drop-item" role="option">
+                            <span class="dl-drop-item-label">
+                                <span class="dl-drop-item-icon"></span>
+                                Fedora (.rpm)
+                            </span>
+                            <span class="dl-drop-item-arch">x64</span>
+                        </a>
+                        <a href="#" class="dl-drop-item" role="option">
+                            <span class="dl-drop-item-label">
+                                <span class="dl-drop-item-icon"></span>
+                                AppImage
+                            </span>
+                            <span class="dl-drop-item-arch">x64</span>
+                        </a>
+                        <a href="#" class="dl-drop-item" role="option">
+                            <span class="dl-drop-item-label">
+                                <span class="dl-drop-item-icon"></span>
+                                Debian (.deb)
+                            </span>
+                            <span class="dl-drop-item-arch">x64</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </section>
 
@@ -1405,7 +1579,7 @@
                         <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
                     </button>
                     <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">Currently, Vanguard Player is fully optimized and compiled for <strong style="color:#fff">Windows (.exe)</strong> and <strong style="color:#fff">Linux (.AppImage)</strong>.</div>
+                        <div class="faq-answer-inner">Currently, Vanguard Player is fully supported on <strong style="color:#fff">Windows (.exe)</strong> and <strong style="color:#fff">Linux</strong>, available as <strong style="color:#fff">.AppImage</strong>, <strong style="color:#fff">.deb</strong> (Debian/Ubuntu), and <strong style="color:#fff">.rpm</strong> (Fedora/RHEL) — all x64.</div>
                     </div>
                 </div>
                 <div class="faq-item">
@@ -1414,7 +1588,7 @@
                         <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
                     </button>
                     <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">No! Vanguard Player is built to be completely portable. The required audio engines (mpv) and extractors (yt-dlp, ffmpeg) are bundled directly into the app. It works perfectly right out of the box with zero setup required.</div>
+                        <div class="faq-answer-inner">Vanguard Player requires <strong style="color:#fff">mpv</strong>, <strong style="color:#fff">yt-dlp</strong>, and <strong style="color:#fff">ffprobe</strong> to function. These are managed directly inside the app via the built-in <strong style="color:#fff">Dependencies</strong> screen — you can check their status, see version info, and install or update them all in one click using your system's package manager (apt, pacman, dnf, winget, brew). No manual terminal work needed.</div>
                     </div>
                 </div>
                 <div class="faq-item">
@@ -1423,7 +1597,7 @@
                         <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
                     </button>
                     <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">Yes, you need an active internet connection to search for and stream new music. However, any tracks you have downloaded using the built-in MP3 extractor can be played offline using your OS's native media player.</div>
+                        <div class="faq-answer-inner">Yes, you need an active internet connection to search for and stream new music. However, any tracks you have downloaded using the built-in MP3 extractor are saved to your local Music directory and can be played anytime through the <strong style="color:#fff">Offline</strong> section directly inside Vanguard Player — no internet required.</div>
                     </div>
                 </div>
             </div>
@@ -1534,27 +1708,15 @@
 
         document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
 
-        // ── Nav scroll class ──
+        // ── Nav scroll class + progress bar ──
         const nav = document.getElementById('main-nav');
+        const progressBar = document.getElementById('scroll-progress');
         window.addEventListener('scroll', () => {
             nav.classList.toggle('scrolled', window.scrollY > 20);
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            progressBar.style.width = (scrollTop / docHeight * 100) + '%';
         }, { passive: true });
-
-        // ── OS detection ──
-        const ua = navigator.userAgent.toLowerCase();
-        const winCard = document.getElementById('dl-windows');
-        const linuxCard = document.getElementById('dl-linux');
-        const isMobile = /mobile|android|iphone|ipad|ipod|windows phone/i.test(ua) || window.innerWidth <= 768;
-
-        if (winCard && linuxCard && !isMobile) {
-            if (ua.includes('windows') || ua.includes('win32')) {
-                winCard.classList.add('highlight-os');
-                linuxCard.classList.add('dimmed-os');
-            } else if (ua.includes('linux') || ua.includes('x11')) {
-                linuxCard.classList.add('highlight-os');
-                winCard.classList.add('dimmed-os');
-            }
-        }
 
         // ── Mobile nav toggle ──
         const mobileToggle = document.getElementById('nav-mobile-toggle');
@@ -1570,6 +1732,29 @@
                 mobileToggle.classList.remove('open');
             });
         });
+
+        // ── Linux dropdown toggle ──
+        const linuxBtn = document.getElementById('dl-linux');
+        const linuxWrap = document.getElementById('dl-linux-wrap');
+        if (linuxBtn && linuxWrap) {
+            linuxBtn.addEventListener('click', function(e) {
+                const isOpen = linuxWrap.classList.toggle('open');
+                linuxBtn.setAttribute('aria-expanded', isOpen);
+            });
+            linuxBtn.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    const isOpen = linuxWrap.classList.toggle('open');
+                    linuxBtn.setAttribute('aria-expanded', isOpen);
+                }
+            });
+            document.addEventListener('click', function(e) {
+                if (!linuxWrap.contains(e.target)) {
+                    linuxWrap.classList.remove('open');
+                    linuxBtn.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
 
         // ── Auto year ──
         document.getElementById('footer-year').textContent = new Date().getFullYear();
@@ -1596,6 +1781,11 @@
         // ── Typewriter hero title ──
         (function() {
             var tw = document.getElementById('typewriter');
+
+            // Safety fallback — if JS stalls for any reason, force title visible after 3s
+            var safetyTimer = setTimeout(function() {
+                tw.style.visibility = 'visible';
+            }, 3000);
 
             // Grab HTML immediately before any render — prevents flash
             var sourceHTML = tw.innerHTML.trim();
@@ -1668,6 +1858,7 @@
 
             // Small delay just to let hero fade-in begin, then start typing
             setTimeout(function() {
+                clearTimeout(safetyTimer); // typing started — cancel the fallback
                 var writer = setupTypewriter(tw, sourceHTML);
                 writer.type();
             }, 950);

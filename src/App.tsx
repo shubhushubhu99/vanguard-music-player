@@ -14,7 +14,8 @@ import {
   FileMusic, AlertCircle, Gauge, Sliders, Moon, FolderOpen,
   PackageCheck, RotateCcw, Timer, Zap, BarChart2, FileOutput,
   CheckCircle, WifiOff, Database, Upload, ArchiveRestore,
-  AlertTriangle, Terminal, ChevronDown, Sparkles, ArrowLeft
+  AlertTriangle, Terminal, ChevronDown, Sparkles, ArrowLeft,
+  Loader2, Link2, CheckCircle2, XCircle
 } from 'lucide-react';
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
@@ -26,6 +27,17 @@ type Track = {
   url: string;
   cover: string;
 };
+
+
+// ─── SPOTIFY IMPORT ──────────────────────────────────────────────────────────
+type SpotifyTrackResult = {
+  spotifyTitle: string;
+  spotifyArtist: string;
+  status: 'pending' | 'fetching' | 'matched' | 'failed';
+  youtubeUrl?: string;
+  youtubeCover?: string;
+};
+
 
 type LocalTrack = {
   title: string;
@@ -339,6 +351,257 @@ const ThemedSelect = ({ value, options, onChange }: {
     </div>
   );
 };
+
+// ─── SPOTIFY IMPORT MODAL ────────────────────────────────────────────────────
+function SpotifyImportModal({
+  onClose,
+  onSavePlaylist,
+  showToast,
+}: {
+  onClose: () => void;
+  onSavePlaylist: (name: string, tracks: Track[]) => void;
+  showToast: (m: string) => void;
+}) {
+  const [url, setUrl] = useState('');
+  const [phase, setPhase] = useState<'idle' | 'fetching' | 'done'>('idle');
+  const [playlistName, setPlaylistName] = useState('');
+  const [results, setResults] = useState<SpotifyTrackResult[]>([]);
+  const abortRef = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const savedRef = useRef(false);
+  const playlistNameRef = useRef('');
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const [debugMsg, setDebugMsg] = useState('');
+
+  const handleFetch = async () => {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    if (!trimmed.includes('spotify.com/playlist/')) {
+      showToast('Please paste a public Spotify playlist URL');
+      return;
+    }
+
+    setPhase('fetching');
+    setDebugMsg('Calling backend...');
+    abortRef.current = false;
+    setResults([]);
+    setPlaylistName('');
+
+    try {
+      setDebugMsg('invoke: search_spotify_playlist');
+      const raw: string = await invoke('search_spotify_playlist', { url: trimmed });
+      setDebugMsg(`Got response: ${raw.length} chars`);
+      const lines = raw.trim().split('\n').filter(Boolean);
+      if (lines.length === 0) { showToast('No tracks found. Is the playlist public?'); setPhase('idle'); setDebugMsg('No tracks'); return; }
+
+      let trackLines = lines;
+      if (lines[0].startsWith('PLAYLIST:')) {
+        const pName = lines[0].replace('PLAYLIST:', '').trim();
+        setPlaylistName(pName);
+        playlistNameRef.current = pName;
+        trackLines = lines.slice(1);
+      }
+
+      const initial: SpotifyTrackResult[] = trackLines.map(l => {
+        const [title, artist] = l.split('====');
+        return { spotifyTitle: title?.trim() || 'Unknown', spotifyArtist: artist?.trim() || '', status: 'pending' };
+      });
+      setResults(initial);
+      setPhase('done');
+      setDebugMsg(`${initial.length} tracks found — matching to YouTube...`);
+
+      const BATCH = 5;
+      for (let start = 0; start < initial.length; start += BATCH) {
+        if (abortRef.current) break;
+        setResults(prev => prev.map((r, idx) =>
+          idx >= start && idx < start + BATCH ? { ...r, status: 'fetching' } : r
+        ));
+        await Promise.all(
+          initial.slice(start, start + BATCH).map(async (track, bi) => {
+            const i = start + bi;
+            try {
+              const q = `${track.spotifyTitle} ${track.spotifyArtist} audio`;
+              const res: string = await invoke('search_youtube', { query: q });
+              const firstLine = res.trim().split('\n')[0];
+              const parts = firstLine?.split('====') || [];
+              const cleanId = parts[3]?.trim();
+              if (cleanId) {
+                setResults(prev => prev.map((r, idx) => idx === i ? {
+                  ...r, status: 'matched',
+                  youtubeUrl: `https://youtube.com/watch?v=${cleanId}`,
+                  youtubeCover: `https://i.ytimg.com/vi/${cleanId}/mqdefault.jpg`,
+                } : r));
+              } else {
+                setResults(prev => prev.map((r, idx) => idx === i ? { ...r, status: 'failed' } : r));
+              }
+            } catch {
+              setResults(prev => prev.map((r, idx) => idx === i ? { ...r, status: 'failed' } : r));
+            }
+          })
+        );
+      }
+      // Auto-save as playlist when all done
+      setResults(prev => {
+        const finalMatched = prev.filter(r => r.status === 'matched');
+        if (finalMatched.length > 0 && !savedRef.current) {
+          savedRef.current = true;
+          const tracks: Track[] = finalMatched.map((r, i) => ({
+            id: i, title: r.spotifyTitle, artist: r.spotifyArtist,
+            duration: '0:00', url: r.youtubeUrl!, cover: r.youtubeCover || '',
+          }));
+          onSavePlaylist(playlistNameRef.current || 'Spotify Import', tracks);
+        }
+        return prev;
+      });
+      setDebugMsg('Done — saved to Playlists');
+    } catch (e) {
+      const msg = String(e);
+      setDebugMsg(`ERROR: ${msg}`);
+      showToast(`Import failed: ${msg}`);
+      console.error('[Spotify Import]', e);
+      setPhase('idle');
+    }
+  };
+
+  const matched = results.filter(r => r.status === 'matched');
+  const pending = results.filter(r => r.status === 'fetching' || r.status === 'pending');
+  const failed = results.filter(r => r.status === 'failed');
+  const isDone = phase === 'done' && pending.length === 0;
+
+
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-md" onClick={onClose}>
+      <div className="w-[620px] max-h-[80vh] flex flex-col rounded-2xl overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.95)]"
+        style={{ background: '#0e0e0e', border: '1px solid rgba(57,255,20,0.15)' }}
+        onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-7 py-5 border-b border-neutral-800/60">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#1DB954' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white">Import Spotify Playlist</h2>
+              {playlistName && <p className="text-xs text-neutral-500 mt-0.5">{playlistName}</p>}
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-500 hover:text-white hover:bg-white/[0.06] transition-all">
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* URL Input */}
+        <div className="px-7 py-5 border-b border-neutral-800/40">
+          <p className="text-xs text-neutral-500 mb-3">Paste your public Spotify playlist link below</p>
+          <div className="flex gap-3">
+            <div className="flex-1 flex items-center gap-2 bg-[#0a0a0a] border border-neutral-800 rounded-xl px-4 py-2.5 focus-within:border-[#39FF14]/40 transition-colors">
+              <Link2 size={14} className="text-neutral-600 shrink-0" />
+              <input ref={inputRef} type="text" value={url} onChange={e => setUrl(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && phase === 'idle') handleFetch(); }}
+                placeholder="https://open.spotify.com/playlist/37i9dQZF1DX..."
+                className="flex-1 bg-transparent text-sm text-neutral-300 placeholder-neutral-700 outline-none"
+                disabled={phase !== 'idle'} />
+            </div>
+            <button onClick={handleFetch} disabled={phase !== 'idle' || !url.trim()}
+              className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: '#39FF14', color: '#000' }}>
+              {phase === 'fetching' && results.length === 0 ? <Loader2 size={16} className="animate-spin" /> : 'Import'}
+            </button>
+          </div>
+          {debugMsg && (
+            <p className="mt-2 text-[11px] font-mono px-1" style={{ color: debugMsg.startsWith('ERROR') ? '#ff4444' : '#39FF14' }}>
+              {debugMsg}
+            </p>
+          )}
+          <button
+            className="mt-2 text-[10px] text-neutral-700 hover:text-neutral-400 underline"
+            onClick={async () => {
+              try {
+                const r = await invoke('ping');
+                setDebugMsg(`invoke works: ${r}`);
+              } catch (e) {
+                setDebugMsg(`invoke BROKEN: ${e}`);
+              }
+            }}>
+            test invoke
+          </button>
+        </div>
+
+        {/* Progress bar + count */}
+        {phase !== 'idle' && results.length > 0 && (
+          <div className="px-7 py-3 border-b border-neutral-800/40">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold tracking-widest uppercase" style={{ color: '#39FF14' }}>
+                {isDone ? `Done · ${matched.length} matched` : `Fetching Tracks · ${matched.length + failed.length} / ${results.length}`}
+                {failed.length > 0 && !isDone && <span className="text-neutral-600 ml-2">({failed.length} failed)</span>}
+              </span>
+              {isDone && failed.length > 0 && (
+                <span className="text-[11px] text-neutral-600">{failed.length} not found</span>
+              )}
+            </div>
+            <div className="h-1 rounded-full bg-neutral-800 overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-300"
+                style={{ width: `${results.length > 0 ? ((matched.length + failed.length) / results.length) * 100 : 0}%`, background: '#39FF14' }} />
+            </div>
+          </div>
+        )}
+
+        {/* Track list */}
+        {results.length > 0 && (
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            {results.map((r, i) => (
+              <div key={i} className="flex items-center gap-4 px-7 py-3 border-b border-neutral-800/30 last:border-0">
+                {/* Cover or placeholder */}
+                <div className="w-9 h-9 rounded-lg shrink-0 overflow-hidden bg-neutral-900 flex items-center justify-center">
+                  {r.youtubeCover
+                    ? <img src={r.youtubeCover} className="w-full h-full object-cover" alt="" />
+                    : <Music size={14} className="text-neutral-700" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{r.spotifyTitle}</p>
+                  <p className="text-xs text-neutral-500 truncate">{r.spotifyArtist}</p>
+                </div>
+                <div className="shrink-0 flex items-center gap-1.5">
+                  {r.status === 'pending' && <span className="text-xs text-neutral-700">Waiting</span>}
+                  {r.status === 'fetching' && <><Loader2 size={13} className="animate-spin text-neutral-500" /><span className="text-xs text-neutral-500">Fetching...</span></>}
+                  {r.status === 'matched' && <><CheckCircle2 size={13} style={{ color: '#39FF14' }} /><span className="text-xs font-semibold" style={{ color: '#39FF14' }}>Matched</span></>}
+                  {r.status === 'failed' && <><XCircle size={13} className="text-red-500" /><span className="text-xs text-red-500">Not found</span></>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {phase === 'idle' && results.length === 0 && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 py-12 text-neutral-700">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" opacity="0.3"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+            <p className="text-sm">Paste a public Spotify playlist URL above</p>
+          </div>
+        )}
+
+        {/* Footer */}
+        {isDone && matched.length > 0 && (
+          <div className="px-7 py-4 border-t border-neutral-800/60 flex items-center justify-between gap-3">
+            <span className="text-xs text-neutral-500">
+              Saved <span style={{ color: '#39FF14' }} className="font-bold">{matched.length}</span> tracks to Playlists
+              {failed.length > 0 && <span className="text-neutral-600 ml-1">· {failed.length} not found</span>}
+            </span>
+            <button onClick={onClose}
+              className="px-5 py-2 rounded-xl text-sm font-bold transition-all hover:shadow-[0_0_20px_rgba(57,255,20,0.3)] active:scale-95"
+              style={{ background: '#39FF14', color: '#000' }}>
+              Done
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // ─── SETTINGS PANEL ──────────────────────────────────────────────────────────
 function SettingsPanel({
@@ -921,6 +1184,7 @@ export default function VanguardPlayer() {
   const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null);
   const [infoModalTrack, setInfoModalTrack] = useState<Track | null>(null);
   const [downloadingTracks, setDownloadingTracks] = useState<Record<string, boolean>>({});
+  const [showSpotifyModal, setShowSpotifyModal] = useState(false);
   const [hoveredTrackUrl, setHoveredTrackUrl] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1850,7 +2114,7 @@ export default function VanguardPlayer() {
           </div>
 
           <div className="mt-4 shrink-0">
-            <button className="w-full relative group overflow-hidden rounded-lg bg-transparent border border-[#39FF14]/50 py-3 px-4 flex items-center justify-center gap-2 transition-all duration-300 hover:border-[#39FF14] hover:shadow-[0_0_20px_rgba(57,255,20,0.3)]">
+            <button onClick={() => setShowSpotifyModal(true)} className="w-full relative group overflow-hidden rounded-lg bg-transparent border border-[#39FF14]/50 py-3 px-4 flex items-center justify-center gap-2 transition-all duration-300 hover:border-[#39FF14] hover:shadow-[0_0_20px_rgba(57,255,20,0.3)]">
               <div className="absolute inset-0 bg-[#39FF14]/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
               <DownloadCloud size={18} className="text-[#39FF14] relative z-10" />
               <span className="text-sm font-semibold text-[#39FF14] relative z-10">Import from Spotify</span>
@@ -2483,6 +2747,19 @@ export default function VanguardPlayer() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── SPOTIFY IMPORT MODAL ── */}
+      {showSpotifyModal && (
+        <SpotifyImportModal
+          onClose={() => setShowSpotifyModal(false)}
+          onSavePlaylist={(name, tracks) => {
+            const id = `spotify_${Date.now()}`;
+            setPlaylists(prev => [...prev, { id, name, description: `Imported from Spotify`, tracks }]);
+            showToast(`Playlist "${name}" saved with ${tracks.length} tracks`);
+          }}
+          showToast={showToast}
+        />
       )}
 
       {/* ── TOAST ── */}
