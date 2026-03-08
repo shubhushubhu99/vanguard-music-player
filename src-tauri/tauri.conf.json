@@ -18,7 +18,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' https://open.spotify.com https://api.spotify.com https://i.ytimg.com; img-src 'self' data: https://i.ytimg.com https://i.scdn.co; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+      "csp": "default-src 'self' tauri: ipc: http://localhost:1420; connect-src 'self' ipc: http://ipc.localhost tauri://localhost https://open.spotify.com https://api.spotify.com https://i.ytimg.com https://yt3.ggpht.com https://lh3.googleusercontent.com; img-src 'self' data: blob: asset: https://i.ytimg.com https://i.scdn.co https://yt3.ggpht.com https://lh3.googleusercontent.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
     }
   },
   "bundle": {

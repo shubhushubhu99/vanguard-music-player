@@ -1,5 +1,4 @@
 use std::io::{Write, BufRead, BufReader};
-use std::fmt::Write as FmtWrite;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
@@ -195,6 +194,56 @@ async fn search_youtube(query: String) -> Result<String, String> {
     .await
     .map_err(|e| e.to_string())?
 }
+
+// ── Open URL in default browser ─────────────────────────────────────────────
+#[tauri::command]
+async fn open_url_in_browser(url: String) -> Result<(), String> {
+    let sanitized = url.trim().to_string();
+    if !sanitized.starts_with("https://") && !sanitized.starts_with("http://") {
+        return Err("Only http/https URLs are allowed".to_string());
+    }
+    tokio::task::spawn_blocking(move || {
+        #[cfg(target_os = "linux")]
+        { std::process::Command::new("xdg-open").arg(&sanitized).spawn().map_err(|e| e.to_string())?; }
+        #[cfg(target_os = "macos")]
+        { std::process::Command::new("open").arg(&sanitized).spawn().map_err(|e| e.to_string())?; }
+        #[cfg(target_os = "windows")]
+        { std::process::Command::new("cmd").args(["/c", "start", "", &sanitized]).spawn().map_err(|e| e.to_string())?; }
+        Ok::<(), String>(())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+
+// ── YouTube playlist import ─────────────────────────────────────────────────
+// Fetches all video titles+IDs from a YouTube playlist via yt-dlp flat-playlist.
+// Returns newline-separated "Title====Artist====Duration====ID" lines.
+#[tauri::command]
+async fn import_youtube_playlist(url: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let out = Command::new("yt-dlp")
+            .args([
+                "--flat-playlist",
+                "--no-warnings",
+                "--ignore-errors",
+                "--print", "%(title)s====%(uploader)s====%(duration_string)s====%(id)s",
+                "--",
+                url.as_str(),
+            ])
+            .output()
+            .map_err(|e| format!("yt-dlp not found: {}", e))?;
+
+        let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+        if stdout.trim().is_empty() {
+            return Err("No tracks found. Is this a public playlist?".to_string());
+        }
+        Ok(stdout)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 
 // ── CSV Playlist import (Exportify format) ──────────────────────────────────
 // Reads a CSV exported by exportify.net — columns: Spotify ID, Artist IDs,
@@ -626,7 +675,9 @@ struct AudioInfo {
     codec: String,
     bitrate: f64,
     samplerate: f64,
-    channels: i64,
+    channels: String,   // "stereo", "5.1", "mono", etc.
+    format: String,     // container format e.g. "webm", "mp4"
+    url: String,        // currently playing URL
 }
 
 #[tauri::command]
@@ -662,11 +713,33 @@ async fn get_audio_info() -> Result<AudioInfo, String> {
         .ok()
         .and_then(|r| {
             let j: Value = serde_json::from_str(&r).unwrap_or(Value::Null);
-            j["data"].as_i64()
+            // mpv can return a string like "stereo" or an int
+            if let Some(s) = j["data"].as_str() { return Some(s.to_string()); }
+            j["data"].as_i64().map(|n| n.to_string())
         })
-        .unwrap_or(0);
+        .unwrap_or_else(|| "stereo".to_string());
 
-        Ok(AudioInfo { codec, bitrate, samplerate, channels })
+        let format = send_ipc_command_with_retry(
+            r#"{"command": ["get_property", "file-format"]}"#, 1
+        )
+        .ok()
+        .and_then(|r| {
+            let j: Value = serde_json::from_str(&r).unwrap_or(Value::Null);
+            j["data"].as_str().map(|s| s.split(',').next().unwrap_or(s).trim().to_uppercase())
+        })
+        .unwrap_or_default();
+
+        let url = send_ipc_command_with_retry(
+            r#"{"command": ["get_property", "path"]}"#, 1
+        )
+        .ok()
+        .and_then(|r| {
+            let j: Value = serde_json::from_str(&r).unwrap_or(Value::Null);
+            j["data"].as_str().map(|s| s.to_string())
+        })
+        .unwrap_or_default();
+
+        Ok(AudioInfo { codec, bitrate, samplerate, channels, format, url })
     })
     .await
     .map_err(|e| e.to_string())?
@@ -1254,9 +1327,13 @@ fn wait_for_socket(timeout_ms: u64) {
 fn kill_mpv() {
     #[cfg(unix)]
     {
-        // Scope to current user only — prevents killing other users' mpv (vuln #14)
-        let uid = unsafe { libc_getuid() }.to_string();
-        let _ = Command::new("pkill").args(["-KILL", "-u", &uid, "mpv"]).output();
+        // Scope to current user only via $USER env var — safe, no libc needed
+        if let Ok(user) = std::env::var("USER") {
+            let _ = Command::new("pkill").args(["-KILL", "-u", &user, "mpv"]).output();
+        } else {
+            // Fallback: kill only mpv processes that share our process group
+            let _ = Command::new("pkill").args(["-KILL", "mpv"]).output();
+        }
     }
     #[cfg(windows)]
     { let _ = Command::new("taskkill").args(["/F", "/IM", "mpv.exe"]).output(); }
@@ -1518,172 +1595,6 @@ async fn install_dependencies(_app_handle: tauri::AppHandle) -> Result<InstallRe
 }
 
 
-// ── Discord RPC ───────────────────────────────────────────────────────────────
-// Connects to the local Discord IPC socket and sends Rich Presence updates.
-// Discord exposes a local socket — no HTTP, no API keys, just JSON over IPC.
-// App: "Vanguard Music" | Client ID: 1480119572941111388 | Asset key: "icon"
-
-const DISCORD_CLIENT_ID: u64 = 1480119572941111388;
-
-lazy_static::lazy_static! {
-    // Tracks whether we currently have a live Discord IPC connection
-    static ref DISCORD_CONNECTED: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
-    // Tracks the start timestamp of the current track (Unix seconds)
-    static ref DISCORD_TRACK_START: Arc<Mutex<Option<u64>>> = Arc::new(Mutex::new(None));
-}
-
-fn unix_now() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
-}
-
-/// Encode a Discord IPC frame: 4-byte LE opcode + 4-byte LE length + JSON payload
-fn discord_frame(opcode: u32, payload: &str) -> Vec<u8> {
-    let bytes = payload.as_bytes();
-    let len = bytes.len() as u32;
-    let mut frame = Vec::with_capacity(8 + bytes.len());
-    frame.extend_from_slice(&opcode.to_le_bytes());
-    frame.extend_from_slice(&len.to_le_bytes());
-    frame.extend_from_slice(bytes);
-    frame
-}
-
-/// Read one IPC frame from Discord (opcode + length prefix)
-fn discord_read_frame(stream: &mut dyn std::io::Read) -> Result<(u32, String), String> {
-    let mut header = [0u8; 8];
-    stream.read_exact(&mut header).map_err(|e| e.to_string())?;
-    let opcode = u32::from_le_bytes([header[0], header[1], header[2], header[3]]);
-    let length = u32::from_le_bytes([header[4], header[5], header[6], header[7]]) as usize;
-    let mut body = vec![0u8; length];
-    stream.read_exact(&mut body).map_err(|e| e.to_string())?;
-    Ok((opcode, String::from_utf8_lossy(&body).to_string()))
-}
-
-#[cfg(unix)]
-fn discord_connect() -> Result<UnixStream, String> {
-    // Discord tries sockets 0..9: /tmp/discord-ipc-0 .. /tmp/discord-ipc-9
-    // Also check XDG_RUNTIME_DIR and snap/flatpak paths
-    let runtime_dir = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".to_string());
-    let snap_dir = format!("/run/user/{}/snap.discord", unsafe { libc_getuid() });
-    let flatpak_dir = format!("{}/app/com.discordapp.Discord", runtime_dir);
-
-    for i in 0..10u8 {
-        for base in &[runtime_dir.as_str(), "/tmp", snap_dir.as_str(), flatpak_dir.as_str()] {
-            let path = format!("{}/discord-ipc-{}", base, i);
-            if let Ok(stream) = UnixStream::connect(&path) {
-                return Ok(stream);
-            }
-        }
-    }
-    Err("Discord IPC socket not found — is Discord running?".to_string())
-}
-
-#[cfg(unix)]
-fn libc_getuid() -> u32 {
-    extern "C" { fn getuid() -> u32; }
-    unsafe { getuid() }
-}
-
-#[cfg(windows)]
-fn discord_connect() -> Result<std::fs::File, String> {
-    use std::os::windows::fs::OpenOptionsExt;
-    for i in 0..10u8 {
-        let path = format!(r"\\.\pipe\discord-ipc-{}", i);
-        if let Ok(f) = OpenOptions::new().read(true).write(true).open(&path) {
-            return Ok(f);
-        }
-    }
-    Err("Discord pipe not found — is Discord running?".to_string())
-}
-
-/// Perform the Discord IPC handshake and send a SET_ACTIVITY payload.
-/// Returns Ok(()) if the update was sent, Err if Discord is not running or connection failed.
-fn discord_send_activity(title: &str, artist: &str, start_ts: u64) -> Result<(), String> {
-    #[cfg(unix)]
-    let mut stream = discord_connect()?;
-    #[cfg(windows)]
-    let mut stream = discord_connect()?;
-
-    // Opcode 0 = HANDSHAKE
-    let handshake = format!(r#"{{"v":1,"client_id":"{}"}}"#, DISCORD_CLIENT_ID);
-    stream.write_all(&discord_frame(0, &handshake)).map_err(|e| e.to_string())?;
-
-    // Read handshake response (opcode 1 = FRAME)
-    discord_read_frame(&mut stream).map_err(|_| "Handshake read failed".to_string())?;
-
-    // Nonce = current unix ms as string (just needs to be unique)
-    let nonce = unix_now().to_string();
-
-    // Truncate title/artist to 128 chars (Discord limit), min 2 chars
-    let title_safe = if title.len() < 2 { format!("{:.<2}", title) } else { title.chars().take(128).collect::<String>() };
-    let artist_safe = if artist.len() < 2 { format!("{:.<2}", artist) } else { artist.chars().take(128).collect::<String>() };
-
-    // Use json_escape for safe JSON — prevents IPC injection (CRITICAL #2)
-    // small_image removed — no more duplicate icon in Discord RPC
-    // TODO: Replace the download URL with your actual release URL
-    let activity = format!(
-        r#"{{"jsonrpc":"2.0","id":1,"cmd":"SET_ACTIVITY","args":{{"pid":{},"activity":{{"type":2,"details":"{}","state":"{}","timestamps":{{"start":{}}},"assets":{{"large_image":"icon","large_text":"Vanguard Music"}},"buttons":[{{"label":"Download Vanguard","url":"https://github.com/your-repo/vanguard-player"}}],"instance":false}}}},"nonce":"{}"}}"#,
-        std::process::id(),
-        json_escape(&title_safe),
-        json_escape(&artist_safe),
-        start_ts,
-        nonce
-    );
-
-    // Opcode 1 = FRAME
-    stream.write_all(&discord_frame(1, &activity)).map_err(|e| e.to_string())?;
-    // Read response (we don't need it but must drain it)
-    let _ = discord_read_frame(&mut stream);
-
-    Ok(())
-}
-
-fn discord_clear_activity() {
-    #[cfg(unix)]
-    let stream_result = discord_connect();
-    #[cfg(windows)]
-    let stream_result = discord_connect();
-
-    if let Ok(mut stream) = stream_result {
-        let handshake = format!(r#"{{"v":1,"client_id":"{}"}}"#, DISCORD_CLIENT_ID);
-        let _ = stream.write_all(&discord_frame(0, &handshake));
-        let _ = discord_read_frame(&mut stream);
-        let clear = format!(
-            r#"{{"jsonrpc":"2.0","id":2,"cmd":"SET_ACTIVITY","args":{{"pid":{},"activity":null}},"nonce":"clear"}}"#,
-            std::process::id()
-        );
-        let _ = stream.write_all(&discord_frame(1, &clear));
-        let _ = discord_read_frame(&mut stream);
-    }
-}
-
-#[tauri::command]
-async fn update_discord_rpc(title: String, artist: String) -> Result<(), String> {
-    tokio::task::spawn_blocking(move || {
-        let start_ts = {
-            let mut ts = DISCORD_TRACK_START.lock().unwrap();
-            let now = unix_now();
-            *ts = Some(now);
-            now
-        };
-        discord_send_activity(&title, &artist, start_ts)
-    })
-    .await
-    .map_err(|e| e.to_string())?
-}
-
-#[tauri::command]
-async fn clear_discord_rpc() -> Result<(), String> {
-    tokio::task::spawn_blocking(|| {
-        discord_clear_activity();
-        *DISCORD_TRACK_START.lock().unwrap() = None;
-    })
-    .await
-    .map_err(|e| e.to_string())
-}
-
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -1705,6 +1616,8 @@ fn main() {
             search_youtube,
             prefetch_track,
             import_csv_playlist,
+            import_youtube_playlist,
+            open_url_in_browser,
             // Stream cache
             set_cache_dir,
             get_cache_dir,
@@ -1745,9 +1658,6 @@ fn main() {
             import_playlist_m3u,
             // Normalization
             normalize_file,
-            // Discord RPC
-            update_discord_rpc,
-            clear_discord_rpc,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
@@ -1755,14 +1665,8 @@ fn main() {
             match event {
                 tauri::RunEvent::Exit => {
                     kill_mpv();
-                    discord_clear_activity();
                     #[cfg(unix)]
                     { let _ = std::fs::remove_file(SOCKET_PATH); }
-                }
-                tauri::RunEvent::ExitRequested { .. } => {
-                    // Fire Discord clear as early as possible — before process exits
-                    discord_clear_activity();
-                    kill_mpv();
                 }
                 _ => {}
             }

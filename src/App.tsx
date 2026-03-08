@@ -59,7 +59,7 @@ type CtxMenu = {
 };
 
 type DepsStatus = { mpv: boolean; yt_dlp: boolean; ffprobe: boolean };
-type AudioInfo = { codec: string; bitrate: number; samplerate: number; channels: number };
+type AudioInfo = { codec: string; bitrate: number; samplerate: number; channels: string; format: string; url: string };
 type DiskInfo = { used_bytes: number; track_count: number };
 type BatchProgress = { index: number; total: number; title: string; success: boolean; error?: string };
 type InstallResult = { success: boolean; message: string };
@@ -88,11 +88,14 @@ function loadLS<T>(key: string, fb: T): T {
 function saveLS(key: string, v: unknown) {
   try { localStorage.setItem(key, JSON.stringify(v)); } catch {}
 }
-function clampMenu(x: number, y: number, w = 260, h = 380) {
-  return {
-    x: x + w > window.innerWidth ? window.innerWidth - w - 8 : x,
-    y: y + h > window.innerHeight ? window.innerHeight - h - 8 : y,
-  };
+function clampMenu(x: number, y: number, w = 260, h = 420) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  // Flip to left if not enough room on right
+  const cx = x + w > vw - 8 ? Math.max(8, x - w) : x;
+  // Flip upward if not enough room below
+  const cy = y + h > vh - 8 ? Math.max(8, y - h) : y;
+  return { x: cx, y: cy };
 }
 
 // ─── SLEEP TIMER BUTTON (top-right, animated) ─────────────────────────────────
@@ -104,7 +107,7 @@ const SleepTimerButton = React.memo(({
   return (
     <button
       onClick={onOpen}
-      title={active ? `Sleep in ${mins}m — click to change` : 'Set sleep timer'}
+      title={active ? `Sleep in ${mins}m, click to change` : 'Set sleep timer'}
       className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300
         ${active
           ? 'bg-amber-500/15 border border-amber-500/40 text-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.2)]'
@@ -188,7 +191,7 @@ const DepsBanner = React.memo(({ deps, onGoToSettings }: { deps: DepsStatus | nu
       {playbackMissing.length > 0 && (
         <div className="flex items-center gap-3 px-4 py-2 bg-red-500/10 border-b border-red-500/20 text-red-400 text-xs font-medium">
           <WifiOff size={13} className="shrink-0" />
-          <span className="flex-1"><strong>{playbackMissing.join(', ')}</strong> not found — playback won't work.</span>
+          <span className="flex-1"><strong>{playbackMissing.join(', ')}</strong> not found, playback won't work.</span>
           <button onClick={onGoToSettings} className="shrink-0 px-2.5 py-1 bg-red-500/20 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors">Install →</button>
         </div>
       )}
@@ -204,6 +207,7 @@ type TrackRowProps = {
   isLiked: boolean; isDownloading: boolean;
   onPlay: () => void; onHoverEnter: () => void; onHoverLeave: () => void;
   onLike: () => void; onDownload: () => void; onCtx: (e: React.MouseEvent) => void;
+
 };
 const TrackRow = React.memo(({
   track, index, showRemove, onRemove,
@@ -352,31 +356,98 @@ const ThemedSelect = ({ value, options, onChange }: {
 // ─── SPOTIFY IMPORT MODAL ────────────────────────────────────────────────────
 // ── CSV Playlist Import Modal ─────────────────────────────────────────────────
 // Uses exportify.net — no API keys or spotdl needed
+function ImportResultModal({
+  matchedCount, failedCount,
+  onSave, onClose,
+}: { matchedCount: number; failedCount: number; onSave: (name: string, desc: string) => void; onClose: () => void }) {
+  const [name, setName] = useState('');
+  const [desc, setDesc] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+  return (
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/85 backdrop-blur-md">
+      <div className="w-[420px] rounded-2xl overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.95)]"
+        style={{ background: '#0e0e0e', border: '1px solid rgba(57,255,20,0.2)' }}>
+        <div className="px-7 py-5 border-b border-neutral-800/60">
+          <h2 className="text-base font-bold text-white">Save Playlist</h2>
+          <p className="text-xs text-neutral-500 mt-1">
+            <span style={{ color: '#39FF14' }} className="font-bold">{matchedCount}</span> tracks matched
+            {failedCount > 0 && <span className="text-neutral-600"> · {failedCount} not found</span>}
+          </p>
+        </div>
+        <div className="px-7 py-5 flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1.5 block">Playlist Name</label>
+            <input ref={inputRef} value={name} onChange={e => setName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && name.trim()) onSave(name.trim(), desc.trim()); }}
+              placeholder="My Playlist" maxLength={80}
+              className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-neutral-700 outline-none focus:border-[#39FF14]/40 transition-colors" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-1.5 block">Description <span className="text-neutral-700 normal-case font-normal">(optional)</span></label>
+            <input value={desc} onChange={e => setDesc(e.target.value)}
+              placeholder="e.g. Chill vibes, road trip..."  maxLength={160}
+              className="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-neutral-700 outline-none focus:border-[#39FF14]/40 transition-colors" />
+          </div>
+          <div className="flex gap-3 mt-1">
+            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-600 transition-colors">Cancel</button>
+            <button onClick={() => { if (name.trim()) onSave(name.trim(), desc.trim()); }}
+              disabled={!name.trim()}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-40 hover:shadow-[0_0_20px_rgba(57,255,20,0.3)] active:scale-[0.98]"
+              style={{ background: '#39FF14', color: '#000' }}>
+              Save Playlist
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ── Inline copy button with "Copied ✓" flash ──────────────────────────────────
+function CopyButton({ text, label, icon: Icon, disabled = false, className = '' }: {
+  text: string; label: string; icon: React.ElementType; disabled?: boolean; className?: string;
+}) {
+  const [copied, setCopied] = React.useState(false);
+  const handleCopy = async () => {
+    if (!text || disabled) return;
+    try {
+      if (navigator?.clipboard?.writeText) await navigator.clipboard.writeText(text);
+      else { const el = document.createElement('textarea'); el.value = text; el.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  };
+  return (
+    <button onClick={handleCopy} disabled={disabled}
+      className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 transition-colors disabled:opacity-30 ${className}`}>
+      {copied ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#39FF14" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span style={{color:'#39FF14'}}>Copied!</span></> : <><Icon size={14} />{label}</>}
+    </button>
+  );
+}
+
 function CsvImportModal({
   onClose,
   onSavePlaylist,
   showToast,
 }: {
   onClose: () => void;
-  onSavePlaylist: (name: string, tracks: Track[]) => void;
+  onSavePlaylist: (name: string, desc: string, tracks: Track[]) => void;
   showToast: (m: string) => void;
 }) {
-  const [phase, setPhase] = useState<'instructions' | 'matching' | 'done'>('instructions');
-  const [playlistName, setPlaylistName] = useState('Spotify Import');
+  const [phase, setPhase] = useState<'instructions' | 'matching' | 'saving' | 'done'>('instructions');
   const [results, setResults] = useState<{ title: string; artist: string; status: 'pending' | 'fetching' | 'matched' | 'failed'; url?: string; cover?: string }[]>([]);
   const [statusMsg, setStatusMsg] = useState('');
+  const [matchedTracks, setMatchedTracks] = useState<Track[]>([]);
+  const [failedCount, setFailedCount] = useState(0);
   const abortRef = useRef(false);
-  const savedRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   const handleFile = async (file: File) => {
     if (!file.name.endsWith('.csv')) { showToast('Please upload a .csv file from Exportify'); return; }
     const text = await file.text();
-
-    // Parse playlist name from filename e.g. "my playlist.csv"
-    const nameFromFile = file.name.replace(/\.csv$/i, '').trim();
-    if (nameFromFile) setPlaylistName(nameFromFile);
 
     setStatusMsg('Parsing CSV...');
     let raw: string;
@@ -390,12 +461,7 @@ function CsvImportModal({
 
     const lines = raw.trim().split('\n').filter(Boolean);
     let trackLines = lines;
-    if (lines[0]?.startsWith('PLAYLIST:')) {
-      const pName = lines[0].replace('PLAYLIST:', '').trim();
-      if (pName && pName !== 'Spotify Import') setPlaylistName(pName);
-      trackLines = lines.slice(1);
-    }
-
+    if (lines[0]?.startsWith('PLAYLIST:')) trackLines = lines.slice(1);
     if (trackLines.length === 0) { showToast('No tracks found in CSV'); return; }
 
     const initial = trackLines.map(l => {
@@ -405,73 +471,65 @@ function CsvImportModal({
 
     setResults(initial);
     setPhase('matching');
-    setStatusMsg(`Matching ${initial.length} tracks to YouTube...`);
     abortRef.current = false;
-    savedRef.current = false;
 
-    const BATCH = 6;
-    for (let start = 0; start < initial.length; start += BATCH) {
-      if (abortRef.current) break;
-      setResults(prev => prev.map((r, idx) =>
-        idx >= start && idx < start + BATCH ? { ...r, status: 'fetching' } : r
-      ));
-      await Promise.all(
-        initial.slice(start, start + BATCH).map(async (track, bi) => {
-          const i = start + bi;
-          try {
-            const q = `${track.title} ${track.artist} audio`;
-            const res: string = await invoke('search_youtube', { query: q });
-            const firstLine = res.trim().split('\n')[0];
-            const parts = firstLine?.split('====') || [];
-            const cleanId = parts[3]?.trim();
-            if (cleanId) {
-              setResults(prev => prev.map((r, idx) => idx === i ? {
-                ...r, status: 'matched',
-                url: `https://youtube.com/watch?v=${cleanId}`,
-                cover: `https://i.ytimg.com/vi/${cleanId}/mqdefault.jpg`,
-              } : r));
-            } else {
-              setResults(prev => prev.map((r, idx) => idx === i ? { ...r, status: 'failed' } : r));
-            }
-          } catch {
-            setResults(prev => prev.map((r, idx) => idx === i ? { ...r, status: 'failed' } : r));
-          }
-        })
-      );
-      // Scroll to bottom of list to follow progress
+    // ── FULLY PARALLEL — all tracks at once, max concurrency via Promise.all ──
+    const CONCURRENCY = 12; // 12 simultaneous yt-dlp searches
+    const total = initial.length;
+    let completed = 0;
+
+    const semaphore = new Array(CONCURRENCY).fill(null);
+    const matched: Track[] = [];
+    let failed = 0;
+
+    const processTrack = async (track: typeof initial[0], i: number) => {
+      if (abortRef.current) return;
+      setResults(prev => prev.map((r, idx) => idx === i ? { ...r, status: 'fetching' } : r));
+      try {
+        const q = `${track.title} ${track.artist} audio`;
+        const res: string = await invoke('search_youtube', { query: q });
+        const firstLine = res.trim().split('\n')[0];
+        const parts = firstLine?.split('====') || [];
+        const cleanId = parts[3]?.trim();
+        if (cleanId) {
+          const t: Track = { id: i, title: track.title, artist: track.artist, duration: parts[2]?.trim() || '0:00',
+            url: `https://youtube.com/watch?v=${cleanId}`, cover: `https://i.ytimg.com/vi/${cleanId}/mqdefault.jpg` };
+          matched.push(t);
+          setResults(prev => prev.map((r, idx) => idx === i ? { ...r, status: 'matched', url: t.url, cover: t.cover } : r));
+        } else {
+          failed++;
+          setResults(prev => prev.map((r, idx) => idx === i ? { ...r, status: 'failed' } : r));
+        }
+      } catch {
+        failed++;
+        setResults(prev => prev.map((r, idx) => idx === i ? { ...r, status: 'failed' } : r));
+      }
+      completed++;
+      setStatusMsg(`Matching ${completed} / ${total}...`);
       if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
-      const matched = initial.slice(0, start + BATCH).filter((_, i) => {
-        const r = (document.querySelector(`[data-idx="${i}"]`) as HTMLElement);
-        return r?.dataset.status === 'matched';
-      }).length;
-      setStatusMsg(`Matched ${start + BATCH >= initial.length ? 'all' : start + BATCH} / ${initial.length} tracks...`);
+    };
+
+    // Chunk into groups of CONCURRENCY and process each group fully in parallel
+    for (let start = 0; start < initial.length; start += CONCURRENCY) {
+      if (abortRef.current) break;
+      const chunk = initial.slice(start, start + CONCURRENCY);
+      await Promise.all(chunk.map((track, bi) => processTrack(track, start + bi)));
     }
 
-    // Auto-save
-    setResults(prev => {
-      const finalMatched = prev.filter(r => r.status === 'matched');
-      if (finalMatched.length > 0 && !savedRef.current) {
-        savedRef.current = true;
-        const tracks: Track[] = finalMatched.map((r, i) => ({
-          id: i, title: r.title, artist: r.artist,
-          duration: '0:00', url: r.url!, cover: r.cover || '',
-        }));
-        onSavePlaylist(playlistName, tracks);
-      }
-      return prev;
-    });
-    setPhase('done');
+    setMatchedTracks(matched);
+    setFailedCount(failed);
+    setPhase('saving');
     setStatusMsg('');
   };
 
   const matched = results.filter(r => r.status === 'matched');
-  const pending = results.filter(r => r.status === 'fetching' || r.status === 'pending');
   const failed = results.filter(r => r.status === 'failed');
-  const isDone = phase === 'done';
+  const isDone = phase === 'done' || phase === 'saving';
 
   return (
+    <>
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-md" onClick={onClose}>
-      <div className="w-[640px] max-h-[85vh] flex flex-col rounded-2xl overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.95)]"
+      <div className="w-[740px] max-h-[88vh] flex flex-col rounded-2xl overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.95)]"
         style={{ background: '#0e0e0e', border: '1px solid rgba(57,255,20,0.15)' }}
         onClick={e => e.stopPropagation()}>
 
@@ -481,10 +539,7 @@ function CsvImportModal({
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#1DB954' }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
             </div>
-            <div>
-              <h2 className="text-base font-bold text-white">Import Spotify Playlist</h2>
-              {playlistName && phase !== 'instructions' && <p className="text-xs text-neutral-500 mt-0.5">{playlistName}</p>}
-            </div>
+            <h2 className="text-base font-bold text-white">Import Spotify Playlist</h2>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-500 hover:text-white hover:bg-white/[0.06] transition-all">
             <X size={16} />
@@ -495,57 +550,40 @@ function CsvImportModal({
         {phase === 'instructions' && (
           <div className="flex-1 flex flex-col px-7 py-6 gap-5 overflow-y-auto custom-scrollbar">
             <p className="text-sm text-neutral-400 leading-relaxed">
-              Vanguard uses <span className="text-white font-semibold">Exportify</span> to import Spotify playlists — no extra software needed.
-              Follow these steps:
+              Vanguard uses <span className="text-white font-semibold">Exportify</span> to import Spotify playlists, no extra software needed.
             </p>
-
-            {/* Steps */}
             {[
               { n: '1', title: 'Go to Exportify', desc: 'Open exportify.net in your browser', link: 'https://exportify.net', linkLabel: 'exportify.net →' },
               { n: '2', title: 'Log in with Spotify', desc: 'Click "Log in with Spotify" and authorise Exportify to read your playlists.' },
-              { n: '3', title: 'Export your playlist', desc: 'Find the playlist you want and click the green Export button. A .csv file will download.' },
-              { n: '4', title: 'Upload here', desc: 'Click the button below and select the downloaded .csv file.' },
+              { n: '3', title: 'Export your playlist', desc: 'Find the playlist and click the green Export button. A .csv file will download.' },
+              { n: '4', title: 'Upload the CSV here', desc: 'Click the button below and select the downloaded .csv file.' },
             ].map(step => (
               <div key={step.n} className="flex gap-4 items-start">
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-black mt-0.5" style={{ background: '#39FF14' }}>
-                  {step.n}
-                </div>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-black mt-0.5" style={{ background: '#39FF14' }}>{step.n}</div>
                 <div>
                   <p className="text-sm font-semibold text-white">{step.title}</p>
                   <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">{step.desc}</p>
-                  {step.link && (
-                    <a href={step.link} target="_blank" rel="noreferrer"
-                      className="text-xs mt-1 inline-block font-semibold hover:underline" style={{ color: '#39FF14' }}>
-                      {step.linkLabel}
-                    </a>
-                  )}
+                  {step.link && <a href={step.link} target="_blank" rel="noreferrer" className="text-xs mt-1 inline-block font-semibold hover:underline" style={{ color: '#39FF14' }}>{step.linkLabel}</a>}
                 </div>
               </div>
             ))}
-
-            {/* Upload button */}
             <input ref={fileInputRef} type="file" accept=".csv" className="hidden"
               onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-            <button
-              onClick={() => fileInputRef.current?.click()}
+            <button onClick={() => fileInputRef.current?.click()}
               className="mt-2 w-full py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(57,255,20,0.35)] active:scale-[0.98]"
               style={{ background: '#39FF14', color: '#000' }}>
-              <Upload size={16} />
-              Upload Exportify CSV
+              <Upload size={16} /> Upload Exportify CSV
             </button>
           </div>
         )}
 
         {/* Matching / done phase */}
-        {(phase === 'matching' || phase === 'done') && (
+        {(phase === 'matching' || phase === 'saving' || phase === 'done') && (
           <>
-            {/* Progress bar */}
             <div className="px-7 py-3 border-b border-neutral-800/40 shrink-0">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[11px] font-bold tracking-widest uppercase" style={{ color: '#39FF14' }}>
-                  {isDone
-                    ? `Done · ${matched.length} matched`
-                    : `Matching · ${matched.length + failed.length} / ${results.length}`}
+                  {isDone ? `Done · ${matched.length} matched` : `Matching · ${matched.length + failed.length} / ${results.length}`}
                   {failed.length > 0 && <span className="text-neutral-600 ml-2">· {failed.length} not found</span>}
                 </span>
                 {statusMsg && <span className="text-[10px] text-neutral-600 font-mono">{statusMsg}</span>}
@@ -555,51 +593,181 @@ function CsvImportModal({
                   style={{ width: `${results.length > 0 ? ((matched.length + failed.length) / results.length) * 100 : 0}%`, background: '#39FF14' }} />
               </div>
             </div>
-
-            {/* Track list */}
             <div ref={listRef} className="flex-1 overflow-y-auto custom-scrollbar">
               {results.map((r, i) => (
-                <div key={i} data-idx={i} data-status={r.status}
-                  className="flex items-center gap-4 px-7 py-3 border-b border-neutral-800/30 last:border-0">
-                  <div className="w-9 h-9 rounded-lg shrink-0 overflow-hidden bg-neutral-900 flex items-center justify-center">
-                    {r.cover
-                      ? <img src={r.cover} className="w-full h-full object-cover" alt="" />
-                      : <Music size={14} className="text-neutral-700" />}
+                <div key={i} className="flex items-center gap-4 px-7 py-2.5 border-b border-neutral-800/30 last:border-0">
+                  <div className="w-8 h-8 rounded-md shrink-0 overflow-hidden bg-neutral-900 flex items-center justify-center">
+                    {r.cover ? <img src={r.cover} className="w-full h-full object-cover" alt="" /> : <Music size={13} className="text-neutral-700" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{r.title}</p>
-                    <p className="text-xs text-neutral-500 truncate">{r.artist}</p>
+                    <p className="text-sm font-semibold text-white truncate leading-snug">{r.title}</p>
+                    <p className="text-xs text-neutral-600 truncate">{r.artist}</p>
                   </div>
-                  <div className="shrink-0 flex items-center gap-1.5">
-                    {r.status === 'pending'  && <span className="text-xs text-neutral-700">—</span>}
-                    {r.status === 'fetching' && <><Loader2 size={13} className="animate-spin text-neutral-500" /><span className="text-xs text-neutral-500">Matching...</span></>}
-                    {r.status === 'matched'  && <><CheckCircle2 size={13} style={{ color: '#39FF14' }} /><span className="text-xs font-semibold" style={{ color: '#39FF14' }}>Matched</span></>}
-                    {r.status === 'failed'   && <><XCircle size={13} className="text-red-500" /><span className="text-xs text-red-500">Not found</span></>}
+                  <div className="shrink-0 flex items-center gap-1.5 w-24 justify-end">
+                    {r.status === 'pending'  && <span className="text-xs text-neutral-800">·</span>}
+                    {r.status === 'fetching' && <Loader2 size={12} className="animate-spin text-neutral-500" />}
+                    {r.status === 'matched'  && <CheckCircle2 size={13} style={{ color: '#39FF14' }} />}
+                    {r.status === 'failed'   && <XCircle size={13} className="text-red-600" />}
                   </div>
                 </div>
               ))}
             </div>
-
-            {/* Footer */}
-            {isDone && (
-              <div className="px-7 py-4 border-t border-neutral-800/60 flex items-center justify-between gap-3 shrink-0">
-                <span className="text-xs text-neutral-500">
-                  Saved <span style={{ color: '#39FF14' }} className="font-bold">{matched.length}</span> tracks to Playlists
-                  {failed.length > 0 && <span className="text-neutral-600 ml-1">· {failed.length} not found</span>}
-                </span>
-                <button onClick={onClose}
-                  className="px-5 py-2 rounded-xl text-sm font-bold transition-all hover:shadow-[0_0_20px_rgba(57,255,20,0.3)] active:scale-95"
-                  style={{ background: '#39FF14', color: '#000' }}>
-                  Done
-                </button>
-              </div>
-            )}
           </>
         )}
       </div>
     </div>
+    {/* Name prompt shown after matching completes */}
+    {phase === 'saving' && (
+      <ImportResultModal
+        matchedCount={matchedTracks.length}
+        failedCount={failedCount}
+        onSave={(name, desc) => {
+          onSavePlaylist(name, desc, matchedTracks);
+          setPhase('done');
+          onClose();
+        }}
+        onClose={() => { setPhase('done'); onClose(); }}
+      />
+    )}
+    </>
   );
 }
+
+// ── YouTube Playlist Import Modal ─────────────────────────────────────────────
+function YtImportModal({
+  onClose,
+  onSavePlaylist,
+  showToast,
+}: {
+  onClose: () => void;
+  onSavePlaylist: (name: string, desc: string, tracks: Track[]) => void;
+  showToast: (m: string) => void;
+}) {
+  const [phase, setPhase] = useState<'input' | 'loading' | 'saving' | 'done'>('input');
+  const [url, setUrl] = useState('');
+  const [results, setResults] = useState<{ title: string; artist: string; id: string; cover: string }[]>([]);
+  const [statusMsg, setStatusMsg] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const handleImport = async () => {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    if (!trimmed.includes('youtube.com') && !trimmed.includes('youtu.be')) {
+      showToast('Please paste a YouTube playlist URL');
+      return;
+    }
+    setPhase('loading');
+    setStatusMsg('Fetching playlist from YouTube...');
+    try {
+      const raw: string = await invoke('import_youtube_playlist', { url: trimmed });
+      const lines = raw.trim().split('\n').filter(Boolean);
+      const parsed = lines.map(l => {
+        const [title, artist, , id] = l.split('====');
+        return {
+          title: title?.trim() || 'Unknown',
+          artist: artist?.trim() || '',
+          id: id?.trim() || '',
+          cover: id?.trim() ? `https://i.ytimg.com/vi/${id.trim()}/mqdefault.jpg` : '',
+        };
+      }).filter(t => t.id);
+
+      if (parsed.length === 0) { showToast('No tracks found'); setPhase('input'); return; }
+      setResults(parsed);
+      setPhase('saving');
+      setStatusMsg('');
+    } catch (e) {
+      showToast(`Import failed: ${e}`);
+      setPhase('input');
+      setStatusMsg('');
+    }
+  };
+
+  const isYtUrl = url.includes('youtube.com') || url.includes('youtu.be');
+
+  return (
+    <>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-md" onClick={onClose}>
+      <div className="w-[680px] max-h-[86vh] flex flex-col rounded-2xl overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.95)]"
+        style={{ background: '#0e0e0e', border: '1px solid rgba(255,0,0,0.15)' }}
+        onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-7 py-5 border-b border-neutral-800/60 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-600">
+              <svg width="18" height="14" viewBox="0 0 18 14" fill="white"><path d="M17.6 2.2C17.4 1.4 16.8.8 16 .6 14.6.2 9 .2 9 .2S3.4.2 2 .6C1.2.8.6 1.4.4 2.2 0 3.6 0 6.5 0 6.5s0 2.9.4 4.3c.2.8.8 1.4 1.6 1.6C3.4 12.8 9 12.8 9 12.8s5.6 0 7-.4c.8-.2 1.4-.8 1.6-1.6.4-1.4.4-4.3.4-4.3s0-2.9-.4-4.3zM7.2 9.3V3.7l4.7 2.8-4.7 2.8z"/></svg>
+            </div>
+            <h2 className="text-base font-bold text-white">Import YouTube Playlist</h2>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-500 hover:text-white hover:bg-white/[0.06] transition-all">
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Input phase */}
+        {(phase === 'input' || phase === 'loading') && (
+          <div className="flex-1 flex flex-col px-7 py-6 gap-5">
+            <p className="text-sm text-neutral-400">Paste a public YouTube playlist URL below. All videos will be imported instantly, no matching needed.</p>
+            <div className="flex gap-3">
+              <div className="flex-1 flex items-center gap-2 bg-[#0a0a0a] border border-neutral-800 rounded-xl px-4 py-2.5 focus-within:border-red-500/40 transition-colors">
+                <svg width="14" height="11" viewBox="0 0 18 14" fill="#666" className="shrink-0"><path d="M17.6 2.2C17.4 1.4 16.8.8 16 .6 14.6.2 9 .2 9 .2S3.4.2 2 .6C1.2.8.6 1.4.4 2.2 0 3.6 0 6.5 0 6.5s0 2.9.4 4.3c.2.8.8 1.4 1.6 1.6C3.4 12.8 9 12.8 9 12.8s5.6 0 7-.4c.8-.2 1.4-.8 1.6-1.6.4-1.4.4-4.3.4-4.3s0-2.9-.4-4.3zM7.2 9.3V3.7l4.7 2.8-4.7 2.8z"/></svg>
+                <input ref={inputRef} value={url} onChange={e => setUrl(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && phase === 'input' && isYtUrl) handleImport(); }}
+                  placeholder="https://youtube.com/playlist?list=..."
+                  disabled={phase === 'loading'}
+                  className="flex-1 bg-transparent text-sm text-neutral-300 placeholder-neutral-700 outline-none" />
+              </div>
+              <button onClick={handleImport} disabled={phase === 'loading' || !isYtUrl}
+                className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-40 flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white">
+                {phase === 'loading' ? <Loader2 size={15} className="animate-spin" /> : <><svg width="13" height="10" viewBox="0 0 18 14" fill="white"><path d="M17.6 2.2C17.4 1.4 16.8.8 16 .6 14.6.2 9 .2 9 .2S3.4.2 2 .6C1.2.8.6 1.4.4 2.2 0 3.6 0 6.5 0 6.5s0 2.9.4 4.3c.2.8.8 1.4 1.6 1.6C3.4 12.8 9 12.8 9 12.8s5.6 0 7-.4c.8-.2 1.4-.8 1.6-1.6.4-1.4.4-4.3.4-4.3s0-2.9-.4-4.3zM7.2 9.3V3.7l4.7 2.8-4.7 2.8z"/></svg>Import</>}
+              </button>
+            </div>
+            {statusMsg && <p className="text-xs text-neutral-500 font-mono">{statusMsg}</p>}
+          </div>
+        )}
+
+        {/* Preview loaded */}
+        {phase === 'saving' && (
+          <div className="flex-1 overflow-y-auto custom-scrollbar px-7 py-4">
+            <p className="text-xs text-neutral-500 mb-3">{results.length} videos found. Enter a name and save.</p>
+            <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+              {results.slice(0, 50).map((r, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <img src={r.cover} className="w-10 h-7 rounded object-cover shrink-0 bg-neutral-900" alt="" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white truncate">{r.title}</p>
+                    <p className="text-xs text-neutral-600 truncate">{r.artist}</p>
+                  </div>
+                </div>
+              ))}
+              {results.length > 50 && <p className="text-xs text-neutral-700 pt-1">+ {results.length - 50} more...</p>}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+    {phase === 'saving' && (
+      <ImportResultModal
+        matchedCount={results.length}
+        failedCount={0}
+        onSave={(name, desc) => {
+          const tracks: Track[] = results.map((r, i) => ({
+            id: i, title: r.title, artist: r.artist, duration: '0:00',
+            url: `https://youtube.com/watch?v=${r.id}`, cover: r.cover,
+          }));
+          onSavePlaylist(name, desc, tracks);
+          setPhase('done');
+          onClose();
+        }}
+        onClose={() => { setPhase('done'); onClose(); }}
+      />
+    )}
+    </>
+  );
+}
+
 
 
 function SettingsPanel({
@@ -701,26 +869,24 @@ function SettingsPanel({
               <p className="text-sm text-neutral-500">Vanguard requires mpv, yt-dlp, and ffprobe to work. Install or update them here.</p>
             </div>
 
-            {/* Status cards */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Status list */}
+            <div className="border border-neutral-800/60 rounded-xl overflow-hidden divide-y divide-neutral-800/60">
               {([
                 { key: 'mpv', label: 'mpv', desc: 'Audio playback', ok: deps?.mpv },
                 { key: 'yt_dlp', label: 'yt-dlp', desc: 'YouTube streaming', ok: deps?.yt_dlp },
                 { key: 'ffprobe', label: 'ffprobe', desc: 'Metadata & waveforms', ok: deps?.ffprobe },
               ] as { key: string; label: string; desc: string; ok: boolean | undefined }[]).map(d => (
-                <div key={d.key} className={`p-4 rounded-xl border transition-all ${d.ok ? 'border-[#39FF14]/20 bg-[#39FF14]/[0.04]' : 'border-red-500/20 bg-red-500/[0.04]'}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-bold font-mono text-white">{d.label}</span>
-                    {d.ok === undefined
-                      ? <div className="w-4 h-4 border-2 border-neutral-700 border-t-transparent rounded-full animate-spin" />
-                      : d.ok
-                        ? <CheckCircle size={15} className="text-[#39FF14]" />
-                        : <X size={15} className="text-red-400" />}
+                <div key={d.key} className="flex items-center justify-between px-5 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${d.ok === undefined ? 'bg-neutral-700 animate-pulse' : d.ok ? 'bg-[#39FF14]' : 'bg-red-500'}`} />
+                    <div>
+                      <span className="text-sm font-bold font-mono text-white">{d.label}</span>
+                      <span className="text-xs text-neutral-600 ml-2">{d.desc}</span>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-neutral-600">{d.desc}</p>
-                  <p className={`text-[11px] font-semibold mt-1 ${d.ok ? 'text-[#39FF14]/70' : 'text-red-400/70'}`}>
+                  <span className={`text-xs font-semibold ${d.ok === undefined ? 'text-neutral-600' : d.ok ? 'text-[#39FF14]' : 'text-red-400'}`}>
                     {d.ok === undefined ? 'Checking...' : d.ok ? 'Installed' : 'Not found'}
-                  </p>
+                  </span>
                 </div>
               ))}
             </div>
@@ -862,7 +1028,7 @@ function SettingsPanel({
                     try {
                       const freed = await invoke<number>('clear_cache');
                       setCacheSize(0);
-                      showToast(`Cache cleared — freed ${fmtBytes(freed)}`);
+                      showToast(`Cache cleared, freed ${fmtBytes(freed)}`);
                     } catch (e) { showToast(`Failed: ${e}`); }
                   }}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors">
@@ -1203,10 +1369,22 @@ export default function VanguardPlayer() {
 
   const [queue, setQueue] = useState<Track[]>(() => loadLS('vg_queue', []));
   const [playHistory, setPlayHistory] = useState<Track[]>(() => loadLS('vg_playHistory', []));
+  // ── Real stats ─────────────────────────────────────────────────────────────
+  const [playCounts, setPlayCounts] = useState<Record<string, number>>(() => loadLS('vg_playCounts', {}));
+  const [listenSecs, setListenSecs] = useState<Record<string, number>>(() => loadLS('vg_listenSecs', {}));
+  const [firstSeen, setFirstSeen] = useState<Record<string, string>>(() => loadLS('vg_firstSeen', {}));
+  const [dailyPlays, setDailyPlays] = useState<Record<string, number>>(() => loadLS('vg_dailyPlays', {}));
+  const listenSecsRef = useRef(listenSecs);
+  useEffect(() => { listenSecsRef.current = listenSecs; }, [listenSecs]);
   const [shuffle, setShuffle] = useState<boolean>(() => loadLS('vg_shuffle', false));
   const [repeatMode, setRepeatMode] = useState<RepeatMode>(() => loadLS('vg_repeatMode', 'off'));
   const repeatModeRef = useRef<RepeatMode>(loadLS('vg_repeatMode', 'off'));
   const [isQueueOpen, setIsQueueOpen] = useState(false);
+  const dragQueueIdx = useRef<number | null>(null);
+  const dragPlaylistIdx = useRef<number | null>(null);
+  const [dragOverPlaylistIdx, setDragOverPlaylistIdx] = React.useState<number | null>(null);
+  const [dragOverPlaylistCardIdx, setDragOverPlaylistCardIdx] = React.useState<number | null>(null);
+  const dragPlaylistCardIdx = useRef<number | null>(null);
 
   const [volume, setVolume] = useState<number>(() => loadLS('vg_volume', 100));
   const [previousVolume, setPreviousVolume] = useState(100);
@@ -1227,6 +1405,7 @@ export default function VanguardPlayer() {
   const [newPlaylistDesc, setNewPlaylistDesc] = useState('');
   const [renamingPlaylist, setRenamingPlaylist] = useState<Playlist | null>(null);
   const [showCsvImportModal, setShowCsvImportModal] = useState(false);
+  const [showYtImportModal, setShowYtImportModal] = useState(false);
   const [showDuplicatesPlaylist, setShowDuplicatesPlaylist] = useState<Playlist | null>(null);
   const [bulkEditPlaylist, setBulkEditPlaylist] = useState<Playlist | null>(null);
   const [renameVal, setRenameVal] = useState('');
@@ -1255,6 +1434,8 @@ export default function VanguardPlayer() {
   }, []);
   const [playbackSpeed, setPlaybackSpeedState] = useState<number>(() => loadLS('vg_speed', 1));
   const [crossfadeSeconds, setCrossfadeSecondsState] = useState<number>(() => loadLS('vg_crossfade', 0));
+  const [bookmarks, setBookmarks] = useState<Record<string, number>>(() => loadLS('vg_bookmarks', {}));
+  useEffect(() => { saveLS('vg_bookmarks', bookmarks); }, [bookmarks]);
   const setCrossfadeSeconds = useCallback((s: number) => {
     setCrossfadeSecondsState(s);
     saveLS('vg_crossfade', s);
@@ -1279,6 +1460,8 @@ export default function VanguardPlayer() {
   const endDetectedRef = useRef(false);
   const currentTrackRef = useRef(currentTrack);
   const queueRef = useRef(queue);
+  const bookmarksRef = useRef(bookmarks);
+  useEffect(() => { bookmarksRef.current = bookmarks; }, [bookmarks]);
   const localTracksListRef = useRef<LocalTrack[]>([]);
   const localTrackIndexRef = useRef(0);
   // Context for playlist/search track navigation (enables skip fwd/back in any Track[] source)
@@ -1292,6 +1475,10 @@ export default function VanguardPlayer() {
   useEffect(() => { saveLS('vg_playlists', playlists); }, [playlists]);
   useEffect(() => { saveLS('vg_queue', queue); }, [queue]);
   useEffect(() => { saveLS('vg_playHistory', playHistory); }, [playHistory]);
+  useEffect(() => { saveLS('vg_playCounts', playCounts); }, [playCounts]);
+  useEffect(() => { saveLS('vg_listenSecs', listenSecs); }, [listenSecs]);
+  useEffect(() => { saveLS('vg_firstSeen', firstSeen); }, [firstSeen]);
+  useEffect(() => { saveLS('vg_dailyPlays', dailyPlays); }, [dailyPlays]);
   useEffect(() => { saveLS('vg_shuffle', shuffle); }, [shuffle]);
   useEffect(() => { saveLS('vg_repeatMode', repeatMode); }, [repeatMode]);
   useEffect(() => { saveLS('vg_volume', volume); }, [volume]);
@@ -1306,37 +1493,13 @@ export default function VanguardPlayer() {
   }, []);
   useEffect(() => { saveLS('vg_currentTrack', currentTrack); }, [currentTrack]);
 
-  // Discord RPC — real-time: fires on every track change with retry
-  // Discord auto-increments the elapsed timer from start_ts, so one call per track is enough.
-  // We retry up to 3 times with 2s delay to handle Discord slow-start on app launch.
-  useEffect(() => {
-    if (!currentTrack) {
-      invoke('clear_discord_rpc').catch(() => {});
-      return;
-    }
-    let cancelled = false;
-    const tryUpdate = async (attempt = 0) => {
-      if (cancelled) return;
-      try {
-        await invoke('update_discord_rpc', { title: currentTrack.title, artist: currentTrack.artist });
-      } catch {
-        if (attempt < 3 && !cancelled) {
-          setTimeout(() => tryUpdate(attempt + 1), 2000 * (attempt + 1));
-        }
-      }
-    };
-    tryUpdate();
-    return () => { cancelled = true; };
-  }, [currentTrack?.url]);
+
   // Save position on page close/refresh
   useEffect(() => {
     const save = () => { saveLS('vg_lastPosition', progressSecondsRef.current); };
-    const clearRpc = () => { invoke('clear_discord_rpc').catch(() => {}); };
-    window.addEventListener('beforeunload', clearRpc);
-    window.addEventListener('beforeunload', save);
+      window.addEventListener('beforeunload', save);
     return () => {
       window.removeEventListener('beforeunload', save);
-      window.removeEventListener('beforeunload', clearRpc);
     };
   }, []);
   useEffect(() => { saveLS('vg_searchHistory', searchHistory); }, [searchHistory]);
@@ -1395,7 +1558,21 @@ export default function VanguardPlayer() {
     return () => { unlisten?.(); };
   }, [showToast]);
 
-  // ── Prefetch next in queue — only when queue head URL changes ───────────────
+  // ── Listen-time accumulator — increments every 5s while playing ──────────
+  useEffect(() => {
+    if (!isPlaying || !currentTrack || isLoadingTrack) return;
+    const url = currentTrack.url;
+    const id = setInterval(() => {
+      setListenSecs(prev => {
+        const next = { ...prev, [url]: (prev[url] || 0) + 5 };
+        listenSecsRef.current = next;
+        return next;
+      });
+    }, 5000);
+    return () => clearInterval(id);
+  }, [isPlaying, currentTrack?.url, isLoadingTrack]);
+
+    // ── Prefetch next in queue — only when queue head URL changes ───────────────
   const lastPrefetchUrl = useRef<string | null>(null);
   useEffect(() => {
     const nextUrl = queue[0]?.url;
@@ -1526,6 +1703,11 @@ export default function VanguardPlayer() {
 
     if (!fromQueue) {
       setPlayHistory(prev => [track, ...prev].slice(0, 50));
+      // Real stats — increment on every play
+      setPlayCounts(prev => ({ ...prev, [track.url]: (prev[track.url] || 0) + 1 }));
+      const today = new Date().toISOString().slice(0, 10);
+      setDailyPlays(prev => ({ ...prev, [today]: (prev[today] || 0) + 1 }));
+      setFirstSeen(prev => prev[track.url] ? prev : { ...prev, [track.url]: new Date().toISOString() });
       // If this track is in the current playlist context, update the index
       if (playlistContextRef.current) {
         const idx = playlistContextRef.current.tracks.findIndex(t => t.url === track.url);
@@ -1557,6 +1739,11 @@ export default function VanguardPlayer() {
       });
 
       setIsPlayingSync(true);
+      // Resume from bookmark if one exists for this track
+      const bm = bookmarksRef.current[track.url];
+      if (bm && bm > 2) {
+        setTimeout(() => invoke('seek_audio', { position: bm }).catch(() => {}), 600);
+      }
     } catch { setIsPlayingSync(false); }
     finally { setIsLoadingTrack(false); }
   }, [volume, playbackSpeed, eq, setIsPlayingSync]);
@@ -1615,7 +1802,6 @@ export default function VanguardPlayer() {
           if (s.duration > 0) { setTrackDurationSeconds(s.duration); trackDurationRef.current = s.duration; }
         } catch {}
       }, 500);
-      // Discord RPC for local track
     } catch { setIsPlayingSync(false); }
     finally { setIsLoadingTrack(false); }
   }, [volume, playbackSpeed, setIsPlayingSync]);
@@ -2045,8 +2231,29 @@ export default function VanguardPlayer() {
     finally { setTimeout(() => setDownloadingTracks(p => ({ ...p, [track.url]: false })), 2000); }
   }, [downloadQuality, downloadPath, showToast]);
 
-  const copyToClipboard = useCallback((t: string) => { navigator.clipboard.writeText(t); showToast('Copied!'); }, [showToast]);
-  const openInYouTube = useCallback((u: string) => { openUrl(u).catch(() => window.open(u, '_blank')); }, []);
+  const copyToClipboard = useCallback(async (text: string) => {
+    try {
+      // Tauri: use writeText from clipboard plugin if available, else navigator
+      if (typeof navigator?.clipboard?.writeText === 'function') {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback: create temp textarea
+        const el = document.createElement('textarea');
+        el.value = text; el.style.position = 'fixed'; el.style.opacity = '0';
+        document.body.appendChild(el); el.select();
+        document.execCommand('copy'); document.body.removeChild(el);
+      }
+      showToast('Copied!');
+    } catch { showToast('Copy failed'); }
+  }, [showToast]);
+  const openInYouTube = useCallback(async (u: string) => {
+    if (!u || (!u.startsWith('http://') && !u.startsWith('https://'))) return;
+    try {
+      await invoke('open_url_in_browser', { url: u });
+    } catch {
+      try { await openUrl(u); } catch { window.open(u, '_blank'); }
+    }
+  }, []);
 
   // ── Playlist helpers ──────────────────────────────────────────────────────────
   const confirmCreatePlaylist = useCallback(() => {
@@ -2150,7 +2357,8 @@ export default function VanguardPlayer() {
               </div>
               <h1 className="text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-[#39FF14] to-emerald-200 drop-shadow-[0_0_8px_rgba(57,255,20,0.6)]">VANGUARD</h1>
             </div>
-            {/* Info hint */}
+            {/* Info hint — only when deps missing */}
+            {deps && (!deps.mpv || !deps.yt_dlp || !deps.ffprobe) && (
             <div className="relative shrink-0" onClick={e => e.stopPropagation()}>
               <div ref={infoHintBtnRef as React.RefObject<HTMLDivElement>} style={{ display: 'inline-block' }}>
                 <InfoHintButton onClick={() => {
@@ -2186,6 +2394,7 @@ export default function VanguardPlayer() {
                 </div>
               )}
             </div>
+            )}
           </div>
 
           {/* Sleep timer pill — always visible */}
@@ -2282,11 +2491,16 @@ export default function VanguardPlayer() {
             )}
           </div>
 
-          <div className="mt-4 shrink-0">
-            <button onClick={() => setShowCsvImportModal(true)} className="w-full relative group overflow-hidden rounded-lg bg-transparent border border-[#39FF14]/50 py-3 px-4 flex items-center justify-center gap-2 transition-all duration-300 hover:border-[#39FF14] hover:shadow-[0_0_20px_rgba(57,255,20,0.3)]">
+          <div className="mt-4 shrink-0 flex flex-col gap-2">
+            <button onClick={() => setShowCsvImportModal(true)} className="w-full relative group overflow-hidden rounded-lg bg-transparent border border-[#39FF14]/50 py-2.5 px-4 flex items-center justify-center gap-2 transition-all duration-300 hover:border-[#39FF14] hover:shadow-[0_0_20px_rgba(57,255,20,0.3)]">
               <div className="absolute inset-0 bg-[#39FF14]/0 group-hover:bg-[#39FF14]/5 transition-all duration-300 rounded-lg" />
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#1DB954" className="relative z-10"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="#1DB954" className="relative z-10"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
               <span className="text-sm font-semibold text-[#39FF14] relative z-10">Import from Spotify</span>
+            </button>
+            <button onClick={() => setShowYtImportModal(true)} className="w-full relative group overflow-hidden rounded-lg bg-transparent border border-red-500/40 py-2.5 px-4 flex items-center justify-center gap-2 transition-all duration-300 hover:border-red-500 hover:shadow-[0_0_20px_rgba(239,68,68,0.3)]">
+              <div className="absolute inset-0 bg-red-500/0 group-hover:bg-red-500/5 transition-all duration-300 rounded-lg" />
+              <svg width="15" height="12" viewBox="0 0 18 14" fill="#ef4444" className="relative z-10"><path d="M17.6 2.2C17.4 1.4 16.8.8 16 .6 14.6.2 9 .2 9 .2S3.4.2 2 .6C1.2.8.6 1.4.4 2.2 0 3.6 0 6.5 0 6.5s0 2.9.4 4.3c.2.8.8 1.4 1.6 1.6C3.4 12.8 9 12.8 9 12.8s5.6 0 7-.4c.8-.2 1.4-.8 1.6-1.6.4-1.4.4-4.3.4-4.3s0-2.9-.4-4.3zM7.2 9.3V3.7l4.7 2.8-4.7 2.8z"/></svg>
+              <span className="text-sm font-semibold text-red-400 relative z-10 group-hover:text-red-300">Import from YouTube</span>
             </button>
           </div>
         </div>
@@ -2385,7 +2599,7 @@ export default function VanguardPlayer() {
                   <div className="mb-6 pt-1">
                     <div className="flex items-center gap-3 mb-3">
                       <span className="w-1.5 h-5 bg-[#39FF14] rounded-full shadow-[0_0_8px_#39FF14] shrink-0" />
-                      <h2 className="text-base font-bold text-white flex-1">Quick Picks</h2>
+                      <h2 className="text-base font-bold text-white flex-1">Recently Played</h2>
                       <button onClick={() => { setQuickPicks([]); }} className="text-[11px] text-neutral-600 hover:text-neutral-400 transition-colors">Clear</button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -2506,16 +2720,61 @@ export default function VanguardPlayer() {
                 </div>
                 {openPlaylist.tracks.length === 0
                   ? <div className="flex flex-col items-center justify-center h-40 text-neutral-700 gap-3"><Music size={32} strokeWidth={1} /><p className="text-sm">No tracks yet.</p></div>
-                  : <div className="flex flex-col gap-1">
+                  : <div className="flex flex-col gap-1 select-none">
                       {openPlaylist.tracks.map((t, i) => (
-                        <TrackRow key={t.url} track={t} index={i} showRemove onRemove={() => removeFromPlaylist(openPlaylist.id, t.url)}
-                          isActive={currentTrack?.url === t.url} isHovered={hoveredTrackUrl === t.url}
-                          isLoadingTrack={isLoadingTrack} isPlaying={isPlaying}
-                          isLiked={isTrackLiked(t.url)} isDownloading={!!downloadingTracks[t.url]}
-                          onPlay={() => handlePlayInContext(t, openPlaylist.tracks)}
-                          onHoverEnter={() => setHoveredTrackUrl(t.url)} onHoverLeave={() => setHoveredTrackUrl(null)}
-                          onLike={() => toggleLikeTrack(t)} onDownload={() => handleDownload(t)}
-                          onCtx={e => openCtx(e, { type: 'track', track: t })} />
+                        <div key={t.url} className="relative group/row flex items-center gap-1">
+                          {/* Drop line indicator */}
+                          {dragOverPlaylistIdx === i && dragPlaylistIdx.current !== null && (
+                            <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#39FF14] rounded-full z-10 shadow-[0_0_6px_#39FF14] pointer-events-none" />
+                          )}
+                          {/* Grip handle — only this part is draggable */}
+                          <div
+                            draggable="true"
+                            onDragStart={e => {
+                              dragPlaylistIdx.current = i;
+                              e.dataTransfer.effectAllowed = 'move';
+                              e.dataTransfer.setData('text/plain', String(i));
+                            }}
+                            onDragEnd={() => {
+                              dragPlaylistIdx.current = null;
+                              setDragOverPlaylistIdx(null);
+                            }}
+                            className="px-1.5 py-4 cursor-grab active:cursor-grabbing flex items-center justify-center shrink-0 opacity-0 group-hover/row:opacity-100 transition-opacity touch-none">
+                            <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" className="text-neutral-500">
+                              <circle cx="3" cy="3" r="1.3"/><circle cx="7" cy="3" r="1.3"/>
+                              <circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/>
+                              <circle cx="3" cy="13" r="1.3"/><circle cx="7" cy="13" r="1.3"/>
+                            </svg>
+                          </div>
+                          {/* Track row — receives drop */}
+                          <div className="flex-1 min-w-0"
+                            onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragOverPlaylistIdx(i); }}
+                            onDragLeave={() => { setDragOverPlaylistIdx(null); }}
+                            onDrop={e => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const from = dragPlaylistIdx.current;
+                              dragPlaylistIdx.current = null;
+                              setDragOverPlaylistIdx(null);
+                              if (from === null || from === i) return;
+                              setPlaylists(prev => prev.map(pl => {
+                                if (pl.id !== openPlaylist.id) return pl;
+                                const arr = [...pl.tracks];
+                                const [moved] = arr.splice(from, 1);
+                                arr.splice(i, 0, moved);
+                                return { ...pl, tracks: arr };
+                              }));
+                            }}>
+                            <TrackRow track={t} index={i} showRemove onRemove={() => removeFromPlaylist(openPlaylist.id, t.url)}
+                              isActive={currentTrack?.url === t.url} isHovered={hoveredTrackUrl === t.url}
+                              isLoadingTrack={isLoadingTrack} isPlaying={isPlaying}
+                              isLiked={isTrackLiked(t.url)} isDownloading={!!downloadingTracks[t.url]}
+                              onPlay={() => handlePlayInContext(t, openPlaylist.tracks)}
+                              onHoverEnter={() => setHoveredTrackUrl(t.url)} onHoverLeave={() => setHoveredTrackUrl(null)}
+                              onLike={() => toggleLikeTrack(t)} onDownload={() => handleDownload(t)}
+                              onCtx={e => openCtx(e, { type: 'track', track: t })} />
+                          </div>
+                        </div>
                       ))}
                     </div>}
               </div>
@@ -2528,31 +2787,64 @@ export default function VanguardPlayer() {
                     <ListMusic size={18} /> Create Playlist
                   </button>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
-                  {playlists.map(pl => {
+                <div className="grid gap-2 select-none" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))' }}>
+                  {playlists.map((pl, plIdx) => {
                     const cover = getPlaylistCover(pl);
+                    const isDragTarget = dragOverPlaylistCardIdx === plIdx && dragPlaylistCardIdx.current !== null && dragPlaylistCardIdx.current !== plIdx;
                     return (
                       <div key={pl.id}
-                        className="group relative cursor-pointer bg-[#0d0d0d] p-4 rounded-xl border border-neutral-800/50 hover:border-[#39FF14]/40 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(57,255,20,0.12)]"
+                        draggable="true"
+                        onDragStart={e => {
+                          dragPlaylistCardIdx.current = plIdx;
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/plain', String(plIdx));
+                        }}
+                        onDragEnd={() => {
+                          dragPlaylistCardIdx.current = null;
+                          setDragOverPlaylistCardIdx(null);
+                        }}
+                        onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragOverPlaylistCardIdx(plIdx); }}
+                        onDragLeave={() => setDragOverPlaylistCardIdx(null)}
+                        onDrop={e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const from = dragPlaylistCardIdx.current;
+                          dragPlaylistCardIdx.current = null;
+                          setDragOverPlaylistCardIdx(null);
+                          if (from === null || from === plIdx) return;
+                          setPlaylists(prev => {
+                            const arr = [...prev];
+                            const [moved] = arr.splice(from, 1);
+                            arr.splice(plIdx, 0, moved);
+                            return arr;
+                          });
+                        }}
+                        className={`group relative cursor-pointer rounded-lg transition-all duration-200 p-2
+                          ${isDragTarget
+                            ? 'ring-2 ring-[#39FF14] ring-offset-2 ring-offset-[#050505] bg-[#39FF14]/[0.05]'
+                            : 'hover:bg-white/[0.04]'}`}
                         onClick={() => setOpenPlaylistId(pl.id)} onContextMenu={e => openCtx(e, { type: 'playlist', playlist: pl })}>
-                        <div className="aspect-square rounded-lg overflow-hidden bg-neutral-900/80 flex items-center justify-center mb-3 relative">
-                          {cover ? <img src={cover} className="w-full h-full object-cover" alt="" />
-                            : pl.id === 'p1' ? <Heart size={40} className="text-red-400 group-hover:text-red-500 transition-all" />
-                            : <ListMusic size={40} className="text-neutral-500 group-hover:text-[#39FF14] transition-all" />}
-                          {pl.tracks.length > 0 && <div className="absolute bottom-2 right-2 bg-[#39FF14] text-black text-xs font-bold px-1.5 py-0.5 rounded-full">{pl.tracks.length}</div>}
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                            <button onClick={e => { e.stopPropagation(); playAll(pl.tracks); }} className="w-10 h-10 bg-[#39FF14] rounded-full flex items-center justify-center shadow-[0_0_15px_#39FF14] hover:scale-110 transition-transform">
-                              <Play size={18} fill="black" className="text-black ml-0.5" />
+                        <div className="w-full aspect-square rounded-md overflow-hidden bg-neutral-900 flex items-center justify-center relative mb-2 shadow-md">
+                          {cover
+                            ? <img src={cover} className="w-full h-full object-cover" alt="" />
+                            : pl.id === 'p1'
+                              ? <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-900/60 to-neutral-900"><Heart size={28} className="text-red-400" /></div>
+                              : <div className="w-full h-full flex items-center justify-center bg-neutral-800/60"><ListMusic size={28} className="text-neutral-600 group-hover:text-[#39FF14] transition-colors" /></div>}
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <button onClick={e => { e.stopPropagation(); playAll(pl.tracks); }}
+                              className="w-9 h-9 bg-[#39FF14] rounded-full flex items-center justify-center shadow-[0_4px_14px_rgba(57,255,20,0.5)] hover:scale-105 active:scale-95 transition-transform">
+                              <Play size={15} fill="black" className="text-black ml-0.5" />
                             </button>
                           </div>
                         </div>
-                        <h3 className="font-bold text-white group-hover:text-[#39FF14] transition-colors truncate text-sm">{pl.name}</h3>
-                        {pl.description && <p className="text-xs text-neutral-600 truncate mt-0.5">{pl.description}</p>}
-                        <p className="text-xs text-neutral-600 mt-0.5">{pl.tracks.length} tracks</p>
+                        <p className="text-[13px] font-semibold text-white group-hover:text-[#39FF14] transition-colors truncate leading-snug">{pl.name}</p>
+                        <p className="text-[11px] text-neutral-600 mt-0.5 truncate">
+                          {pl.description ? pl.description : `${pl.tracks.length} track${pl.tracks.length !== 1 ? 's' : ''}`}
+                        </p>
                         {pl.id !== 'p1' && (
                           <button onClick={e => { e.stopPropagation(); deletePlaylist(pl.id); }}
-                            className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 bg-black/60 rounded-md hover:bg-red-500/30 hover:text-red-400 text-neutral-500 transition-all">
-                            <Trash2 size={12} />
+                            className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center bg-black/70 rounded-md hover:bg-red-500/40 hover:text-red-400 text-neutral-500 transition-all">
+                            <Trash2 size={11} />
                           </button>
                         )}
                       </div>
@@ -2565,80 +2857,178 @@ export default function VanguardPlayer() {
 
           {/* ── SETTINGS ── */}
           {activeNav === 'stats' && (() => {
-            const totalSecs = playHistory.reduce((sum, t) => sum + parseDurationToSeconds(t.duration || '0:00'), 0);
-            const totalHours = (totalSecs / 3600).toFixed(1);
-            const artistCounts: Record<string, number> = {};
-            playHistory.forEach(t => { if (t.artist) artistCounts[t.artist] = (artistCounts[t.artist] || 0) + 1; });
-            const topArtists = Object.entries(artistCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-            const trackCounts: Record<string, { track: Track; count: number }> = {};
-            playHistory.forEach(t => {
-              const k = t.url;
-              if (!trackCounts[k]) trackCounts[k] = { track: t, count: 0 };
-              trackCounts[k].count++;
+            // ── Compute all real stats from persistent data ────────────────
+            const totalUniqueTracks = Object.keys(playCounts).length;
+            const totalPlays = Object.values(playCounts).reduce((s, n) => s + n, 0);
+            const totalListenedSecs = Object.values(listenSecs).reduce((s, n) => s + n, 0);
+            const totalListenHours = totalListenedSecs / 3600;
+            const listenDisplay = totalListenHours >= 1
+              ? `${totalListenHours.toFixed(1)}h`
+              : `${Math.round(totalListenedSecs / 60)}m`;
+
+            // Top tracks by play count — join with playHistory for metadata
+            const trackMeta: Record<string, Track> = {};
+            playHistory.forEach(t => { if (!trackMeta[t.url]) trackMeta[t.url] = t; });
+            const topTracks = Object.entries(playCounts)
+              .filter(([url]) => trackMeta[url])
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 8)
+              .map(([url, count]) => ({ track: trackMeta[url], count, secs: listenSecs[url] || 0 }));
+
+            // Top artists by total listen time
+            const artistSecs: Record<string, number> = {};
+            const artistPlays: Record<string, number> = {};
+            Object.entries(listenSecs).forEach(([url, s]) => {
+              const meta = trackMeta[url]; if (!meta?.artist) return;
+              artistSecs[meta.artist] = (artistSecs[meta.artist] || 0) + s;
+              artistPlays[meta.artist] = (artistPlays[meta.artist] || 0) + (playCounts[url] || 0);
             });
-            const topTracks = Object.values(trackCounts).sort((a, b) => b.count - a.count).slice(0, 5);
+            const topArtists = Object.entries(artistSecs)
+              .sort((a, b) => b[1] - a[1]).slice(0, 6);
+
+            // Last 14 days activity heatmap
+            const days14: { date: string; label: string; count: number }[] = [];
+            for (let i = 13; i >= 0; i--) {
+              const d = new Date(); d.setDate(d.getDate() - i);
+              const iso = d.toISOString().slice(0, 10);
+              const label = i === 0 ? 'Today' : i === 1 ? 'Yest.' : d.toLocaleDateString('en', { weekday: 'short' });
+              days14.push({ date: iso, label, count: dailyPlays[iso] || 0 });
+            }
+            const maxDay = Math.max(...days14.map(d => d.count), 1);
+
+            // Current streak (consecutive days with at least 1 play)
+            let streak = 0;
+            for (let i = 0; ; i++) {
+              const d = new Date(); d.setDate(d.getDate() - i);
+              const iso = d.toISOString().slice(0, 10);
+              if ((dailyPlays[iso] || 0) > 0) streak++;
+              else break;
+            }
+
+            const hasData = totalPlays > 0;
+
             return (
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-                <div>
-                  <h1 className="text-2xl font-bold text-white">Your Stats</h1>
-                  <p className="text-sm text-neutral-500 mt-1">Based on your listening history.</p>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  {[
-                    { label: 'Tracks played', value: playHistory.length, icon: Music },
-                    { label: 'Total listen time', value: `${totalHours}h`, icon: Clock },
-                    { label: 'Artists heard', value: Object.keys(artistCounts).length, icon: BarChart2 },
-                  ].map(({ label, value, icon: Icon }) => (
-                    <div key={label} className="p-5 rounded-xl border border-[#39FF14]/15 bg-[#39FF14]/[0.04]">
-                      <Icon size={18} className="text-[#39FF14] mb-2" />
-                      <p className="text-2xl font-bold text-white">{value}</p>
-                      <p className="text-xs text-neutral-500 mt-0.5">{label}</p>
-                    </div>
-                  ))}
-                </div>
-                {topArtists.length > 0 && (
+              <div className="flex-1 overflow-y-auto p-6 space-y-7 custom-scrollbar">
+                {/* Header */}
+                <div className="flex items-end justify-between">
                   <div>
-                    <h2 className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-3">Top Artists</h2>
-                    <div className="space-y-2">
-                      {topArtists.map(([artist, count], i) => (
-                        <div key={artist} className="flex items-center gap-4 p-3 rounded-xl bg-neutral-900/40 border border-neutral-800/40">
-                          <span className="text-sm font-bold text-neutral-600 w-4">{i + 1}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-white truncate">{artist}</p>
-                            <div className="mt-1 h-1 bg-neutral-800 rounded-full overflow-hidden">
-                              <div className="h-full bg-[#39FF14] rounded-full" style={{ width: `${(count / topArtists[0][1]) * 100}%` }} />
-                            </div>
-                          </div>
-                          <span className="text-xs font-mono text-neutral-500">{count}x</span>
+                    <h1 className="text-2xl font-bold text-white">Your Stats</h1>
+                    <p className="text-sm text-neutral-600 mt-0.5">Live data — updates as you listen.</p>
+                  </div>
+                  {streak > 1 && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                      <span className="text-base">🔥</span>
+                      <span className="text-xs font-bold text-amber-400">{streak} day streak</span>
+                    </div>
+                  )}
+                </div>
+
+                {!hasData && (
+                  <div className="flex flex-col items-center justify-center py-24 text-neutral-700">
+                    <BarChart2 size={44} className="mb-3 opacity-20" />
+                    <p className="text-sm font-medium">Start playing tracks to see your real stats.</p>
+                  </div>
+                )}
+
+                {hasData && (
+                  <>
+                    {/* ── Top 4 stat cards ── */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: 'Total plays', value: totalPlays.toLocaleString(), sub: `${totalUniqueTracks} unique tracks`, icon: Play, color: 'text-[#39FF14]', border: 'border-[#39FF14]/15', bg: 'bg-[#39FF14]/[0.04]' },
+                        { label: 'Time listened', value: listenDisplay, sub: `${Math.round(totalListenedSecs / 60)} minutes total`, icon: Clock, color: 'text-cyan-400', border: 'border-cyan-500/15', bg: 'bg-cyan-500/[0.04]' },
+                        { label: 'Artists heard', value: Object.keys(artistSecs).length.toLocaleString(), sub: 'across all plays', icon: Music, color: 'text-purple-400', border: 'border-purple-500/15', bg: 'bg-purple-500/[0.04]' },
+                        { label: 'Today', value: (dailyPlays[new Date().toISOString().slice(0,10)] || 0).toString(), sub: 'plays today', icon: Zap, color: 'text-amber-400', border: 'border-amber-500/15', bg: 'bg-amber-500/[0.04]' },
+                      ].map(({ label, value, sub, icon: Icon, color, border, bg }) => (
+                        <div key={label} className={`p-4 rounded-xl border ${border} ${bg}`}>
+                          <Icon size={15} className={`${color} mb-2.5`} />
+                          <p className="text-xl font-black text-white leading-none">{value}</p>
+                          <p className="text-[11px] text-neutral-600 mt-1">{sub}</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral-700 mt-1">{label}</p>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
-                {topTracks.length > 0 && (
-                  <div>
-                    <h2 className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-3">Most Played</h2>
-                    <div className="space-y-2">
-                      {topTracks.map(({ track, count }, i) => (
-                        <div key={track.url} onClick={() => handlePlayTrack(track)}
-                          className="flex items-center gap-3 p-3 rounded-xl bg-neutral-900/40 border border-neutral-800/40 cursor-pointer hover:bg-neutral-800/60 transition-colors group">
-                          <span className="text-sm font-bold text-neutral-600 w-4">{i + 1}</span>
-                          <img src={track.cover} className="w-10 h-10 rounded-lg object-cover shrink-0" alt="" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-white truncate group-hover:text-[#39FF14] transition-colors">{track.title}</p>
-                            <p className="text-xs text-neutral-500 truncate">{track.artist}</p>
+
+                    {/* ── 14-day activity bar chart ── */}
+                    <div>
+                      <h2 className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 mb-3">14-Day Activity</h2>
+                      <div className="flex items-end gap-1 h-16">
+                        {days14.map(({ date, label, count }) => (
+                          <div key={date} className="flex-1 flex flex-col items-center gap-1 group" title={`${label}: ${count} plays`}>
+                            <div className="w-full rounded-sm transition-all duration-300 relative"
+                              style={{
+                                height: `${Math.max(2, (count / maxDay) * 48)}px`,
+                                background: count > 0 ? '#39FF14' : '#1a1a1a',
+                                opacity: count > 0 ? Math.max(0.3, count / maxDay) : 1,
+                              }} />
+                            <span className="text-[8px] text-neutral-700 group-hover:text-neutral-500 transition-colors">{label}</span>
                           </div>
-                          <span className="text-xs font-mono font-bold text-[#39FF14]">{count}x</span>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-                {playHistory.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-20 text-neutral-600">
-                    <BarChart2 size={40} className="mb-3 opacity-30" />
-                    <p className="text-sm">Play some tracks to see your stats.</p>
-                  </div>
+
+                    {/* ── Most played tracks ── */}
+                    {topTracks.length > 0 && (
+                      <div>
+                        <h2 className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 mb-3">Most Played</h2>
+                        <div className="space-y-1.5">
+                          {topTracks.map(({ track, count, secs }, i) => {
+                            const listenMins = Math.round(secs / 60);
+                            const pct = topTracks[0].count > 0 ? (count / topTracks[0].count) * 100 : 0;
+                            return (
+                              <div key={track.url} onClick={() => handlePlayTrack(track)}
+                                className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-neutral-900/40 border border-neutral-800/40 cursor-pointer hover:bg-neutral-800/60 transition-colors group">
+                                <span className="text-xs font-bold text-neutral-700 w-4 shrink-0 tabular-nums">{i + 1}</span>
+                                <img src={track.cover} className="w-9 h-9 rounded-lg object-cover shrink-0 border border-neutral-800/60" alt="" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-white truncate group-hover:text-[#39FF14] transition-colors leading-snug">{track.title}</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <div className="flex-1 h-0.5 bg-neutral-800 rounded-full overflow-hidden">
+                                      <div className="h-full bg-[#39FF14]/60 rounded-full" style={{ width: `${pct}%` }} />
+                                    </div>
+                                    {listenMins > 0 && <span className="text-[10px] text-neutral-700 shrink-0">{listenMins}m</span>}
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <span className="text-sm font-black text-[#39FF14]">{count}</span>
+                                  <span className="text-[10px] text-neutral-700 ml-0.5">plays</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Top artists by listen time ── */}
+                    {topArtists.length > 0 && (
+                      <div>
+                        <h2 className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 mb-3">Top Artists</h2>
+                        <div className="space-y-1.5">
+                          {topArtists.map(([artist, secs], i) => {
+                            const mins = Math.round(secs / 60);
+                            const display = mins >= 60 ? `${(mins/60).toFixed(1)}h` : `${mins}m`;
+                            const pct = topArtists[0][1] > 0 ? (secs / topArtists[0][1]) * 100 : 0;
+                            return (
+                              <div key={artist} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-neutral-900/40 border border-neutral-800/40">
+                                <span className="text-xs font-bold text-neutral-700 w-4 shrink-0 tabular-nums">{i + 1}</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-white truncate">{artist}</p>
+                                  <div className="mt-1 h-0.5 bg-neutral-800 rounded-full overflow-hidden">
+                                    <div className="h-full bg-purple-500/60 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <span className="text-sm font-bold text-purple-400">{display}</span>
+                                  <p className="text-[10px] text-neutral-700">{artistPlays[artist] || 0} plays</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             );
@@ -2700,12 +3090,27 @@ export default function VanguardPlayer() {
                       <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-600 px-5 pt-4 pb-2">Up Next</p>
                       {queue.map((track, i) => (
                         <div key={`${track.url}-${i}`}
+                          draggable
+                          onDragStart={() => { dragQueueIdx.current = i; }}
+                          onDragOver={e => { e.preventDefault(); }}
+                          onDrop={e => {
+                            e.preventDefault();
+                            const from = dragQueueIdx.current;
+                            if (from === null || from === i) return;
+                            setQueue(prev => {
+                              const next = [...prev];
+                              const [moved] = next.splice(from, 1);
+                              next.splice(i, 0, moved);
+                              return next;
+                            });
+                            dragQueueIdx.current = null;
+                          }}
                           onContextMenu={e => openCtx(e, { type: 'queue-track', track })}
                           onClick={() => { setQueue(prev => prev.filter((_, idx) => idx !== i)); handlePlayTrack(track, true); }}
-                          className={`flex items-center gap-3 px-4 py-3 cursor-pointer group transition-colors ${currentTrack?.url === track.url ? 'bg-[#39FF14]/[0.06]' : 'hover:bg-white/[0.04]'}`}>
-                          <div className="w-5 shrink-0 flex items-center justify-center">
+                          className={`flex items-center gap-3 px-4 py-3 cursor-pointer group transition-colors select-none ${currentTrack?.url === track.url ? 'bg-[#39FF14]/[0.06]' : 'hover:bg-white/[0.04]'}`}>
+                          <div className="w-5 shrink-0 flex items-center justify-center cursor-grab active:cursor-grabbing">
                             <span className="text-xs text-neutral-700 group-hover:hidden tabular-nums">{i + 1}</span>
-                            <Play size={12} fill="white" className="text-white hidden group-hover:block" />
+                            <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor" className="text-neutral-600 hidden group-hover:block"><circle cx="3" cy="2.5" r="1.2"/><circle cx="7" cy="2.5" r="1.2"/><circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/><circle cx="3" cy="11.5" r="1.2"/><circle cx="7" cy="11.5" r="1.2"/></svg>
                           </div>
                           <img src={track.cover} className="w-10 h-10 rounded-md object-cover shrink-0 border border-neutral-800/60" alt="" />
                           <div className="flex-1 min-w-0">
@@ -2840,6 +3245,25 @@ export default function VanguardPlayer() {
         {/* Right: crossfade + volume */}
         <div className="w-1/4 flex items-center justify-end gap-3 pr-4">
           {/* Crossfade indicator */}
+          {/* Bookmark button */}
+          {currentTrack && (
+            <button
+              onClick={() => {
+                if (bookmarks[currentTrack.url] !== undefined) {
+                  setBookmarks(prev => { const n = {...prev}; delete n[currentTrack.url]; return n; });
+                  showToast('Bookmark removed');
+                } else {
+                  setBookmarks(prev => ({ ...prev, [currentTrack.url]: progressSeconds }));
+                  const m = Math.floor(progressSeconds / 60);
+                  const s = Math.floor(progressSeconds % 60).toString().padStart(2, '0');
+                  showToast(`Bookmarked at ${m}:${s}`);
+                }
+              }}
+              title={bookmarks[currentTrack.url] !== undefined ? `Bookmarked at ${Math.floor(bookmarks[currentTrack.url]/60)}:${Math.floor(bookmarks[currentTrack.url]%60).toString().padStart(2,'0')} — click to remove` : 'Bookmark current position'}
+              className={`transition-colors ${bookmarks[currentTrack.url] !== undefined ? 'text-amber-400' : 'text-neutral-700 hover:text-neutral-400'}`}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+            </button>
+          )}
           {crossfadeSeconds > 0 && (
             <span className="text-[10px] text-purple-400 font-bold tabular-nums" title={`Crossfade: ${crossfadeSeconds}s`}>
               ×{crossfadeSeconds}s
@@ -2947,55 +3371,133 @@ export default function VanguardPlayer() {
       )}
 
       {/* ── INFO MODAL ── */}
-      {infoModalTrack && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
-          <div className="rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" style={{ background: "rgba(12,12,12,0.85)", backdropFilter: "blur(40px)", WebkitBackdropFilter: "blur(40px)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <div className="relative h-48 w-full shrink-0">
-              <img src={infoModalTrack.cover} className="w-full h-full object-cover opacity-40 blur-md" alt="" />
-              <div className="absolute inset-0 flex items-center justify-center pt-4">
-                <img src={infoModalTrack.cover} className="h-32 w-32 rounded-lg shadow-2xl object-cover" alt="" />
+      {infoModalTrack && (() => {
+        const ytId = infoModalTrack.url?.match(/[?&]v=([^&]+)/)?.[1] || infoModalTrack.url?.split('youtu.be/')?.[1]?.split('?')?.[0] || '';
+        const ytUrl = ytId ? `https://youtube.com/watch?v=${ytId}` : infoModalTrack.url;
+        const isYt = !!ytId;
+        const trackAudioInfo = infoModalTrack.url === currentTrack?.url ? audioInfo : null;
+        return (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(20px)' }}
+            onClick={() => setInfoModalTrack(null)}>
+            <div className="rounded-2xl w-full max-w-[420px] overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.9)] flex flex-col"
+              style={{ background: '#0c0c0c', border: '1px solid rgba(255,255,255,0.08)' }}
+              onClick={e => e.stopPropagation()}>
+
+              {/* Cover hero */}
+              <div className="relative h-44 w-full shrink-0 overflow-hidden">
+                <img src={infoModalTrack.cover} className="w-full h-full object-cover opacity-30" style={{ filter: 'blur(20px)', transform: 'scale(1.1)' }} alt="" />
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0c0c0c]" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <img src={infoModalTrack.cover} className="h-28 w-28 rounded-xl shadow-2xl object-cover border border-white/10" alt="" />
+                </div>
+                <button onClick={() => setInfoModalTrack(null)}
+                  className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-black/70 text-neutral-400 hover:text-white hover:bg-black transition-colors">
+                  <X size={14} />
+                </button>
               </div>
-              <button onClick={() => setInfoModalTrack(null)} className="absolute top-4 right-4 bg-black/60 p-2 rounded-full hover:bg-white hover:text-black transition-colors"><X size={18} /></button>
-            </div>
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-gradient-to-b from-[#111] to-[#0a0a0a]">
-              <div className="flex gap-2 mb-6 flex-wrap">
-                <span className="bg-[#1a1a1a] px-3 py-1.5 rounded-full text-xs font-bold border border-neutral-800 flex items-center gap-2 text-cyan-400"><Clock size={12} /> {infoModalTrack.duration}</span>
-                <span className="bg-[#1a1a1a] px-3 py-1.5 rounded-full text-xs font-bold border border-neutral-800 flex items-center gap-2 text-red-500"><Youtube size={12} /> YouTube</span>
-                {audioInfo && <span className="bg-[#1a1a1a] px-3 py-1.5 rounded-full text-xs font-bold border border-neutral-800 flex items-center gap-2 text-emerald-400"><BarChart2 size={12} /> {audioInfo.codec.toUpperCase()}{audioInfo.bitrate > 0 ? ` ${Math.round(audioInfo.bitrate / 1000)}kbps` : ''}</span>}
+
+              {/* Track title + artist */}
+              <div className="px-6 pt-3 pb-4 text-center">
+                <p className="text-base font-bold text-white leading-snug">{infoModalTrack.title}</p>
+                <p className="text-sm text-neutral-500 mt-0.5">{infoModalTrack.artist}</p>
               </div>
-              <div className="space-y-2 mb-6">
+
+              {/* Pills row */}
+              <div className="flex gap-2 px-6 pb-4 flex-wrap justify-center">
+                {infoModalTrack.duration && infoModalTrack.duration !== '0:00' && (
+                  <span className="bg-neutral-900 border border-neutral-800 px-2.5 py-1 rounded-full text-xs font-bold text-cyan-400 flex items-center gap-1.5">
+                    <Clock size={10} /> {infoModalTrack.duration}
+                  </span>
+                )}
+                {isYt && (
+                  <span className="bg-neutral-900 border border-neutral-800 px-2.5 py-1 rounded-full text-xs font-bold text-red-500 flex items-center gap-1.5">
+                    <Youtube size={10} /> YouTube
+                  </span>
+                )}
+                {trackAudioInfo && trackAudioInfo.codec && trackAudioInfo.codec !== 'unknown' && (
+                  <span className="bg-neutral-900 border border-neutral-800 px-2.5 py-1 rounded-full text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                    <BarChart2 size={10} /> {trackAudioInfo.codec.toUpperCase()}
+                    {trackAudioInfo.bitrate > 0 ? ` ${Math.round(trackAudioInfo.bitrate / 1000)}kbps` : ''}
+                  </span>
+                )}
+                {trackAudioInfo && trackAudioInfo.samplerate > 0 && (
+                  <span className="bg-neutral-900 border border-neutral-800 px-2.5 py-1 rounded-full text-xs font-bold text-violet-400 flex items-center gap-1.5">
+                    <Gauge size={10} /> {(trackAudioInfo.samplerate / 1000).toFixed(1)}kHz
+                  </span>
+                )}
+                {trackAudioInfo && trackAudioInfo.channels && (
+                  <span className="bg-neutral-900 border border-neutral-800 px-2.5 py-1 rounded-full text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                    <AlignLeft size={10} /> {trackAudioInfo.channels}
+                  </span>
+                )}
+                {trackAudioInfo && trackAudioInfo.format && (
+                  <span className="bg-neutral-900 border border-neutral-800 px-2.5 py-1 rounded-full text-xs font-bold text-neutral-400 flex items-center gap-1.5">
+                    <FileCode2 size={10} /> {trackAudioInfo.format}
+                  </span>
+                )}
+              </div>
+
+              {/* Info rows */}
+              <div className="mx-6 mb-4 rounded-xl overflow-hidden border border-neutral-800/60 divide-y divide-neutral-800/60">
                 {[
                   { icon: Music, label: 'Title', value: infoModalTrack.title, color: 'text-blue-400', bg: 'bg-blue-500/10' },
                   { icon: FileBadge2, label: 'Artist', value: infoModalTrack.artist, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+                  ...(ytId ? [{ icon: Hash, label: 'Video ID', value: ytId, color: 'text-neutral-400', bg: 'bg-neutral-800/50' }] : []),
                 ].map(({ icon: Icon, label, value, color, bg }) => (
-                  <div key={label} className="flex items-center gap-4 p-3 bg-[#111] rounded-xl border border-neutral-800/50">
-                    <div className={`w-10 h-10 rounded-lg ${bg} flex items-center justify-center ${color}`}><Icon size={20} /></div>
-                    <div className="flex flex-col overflow-hidden">
-                      <span className="text-xs text-neutral-500">{label}</span>
-                      <span className="font-bold text-sm truncate">{value}</span>
+                  <div key={label}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] cursor-pointer transition-colors group"
+                    onClick={() => copyToClipboard(value)}
+                    title={`Click to copy ${label}`}>
+                    <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center ${color} shrink-0`}><Icon size={15} /></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-neutral-600 uppercase tracking-wider font-semibold">{label}</p>
+                      <p className="text-sm font-semibold text-white truncate leading-snug">{value || '—'}</p>
                     </div>
+                    <Copy size={12} className="text-neutral-700 group-hover:text-neutral-400 shrink-0 transition-colors" />
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <button onClick={() => copyToClipboard(infoModalTrack.url.split('v=')[1] || '')} className="p-3 bg-[#111] rounded-xl hover:bg-neutral-800 transition-colors border border-neutral-800 flex items-center justify-center gap-2 text-sm font-medium"><Copy size={16} /> Copy ID</button>
-                <button onClick={() => copyToClipboard(infoModalTrack.url)} className="p-3 bg-[#111] rounded-xl hover:bg-neutral-800 transition-colors border border-neutral-800 flex items-center justify-center gap-2 text-sm font-medium"><Share2 size={16} /> Copy Link</button>
+
+              {/* Action buttons */}
+              <div className="px-6 pb-5 flex flex-col gap-2.5">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <CopyButton text={ytId || ''} label="Copy ID" icon={Copy} disabled={!ytId} />
+                  <CopyButton text={ytUrl} label="Copy Link" icon={Share2} />
+                </div>
+                <button
+                  onClick={() => { openInYouTube(ytUrl); }}
+                  disabled={!ytUrl}
+                  className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(239,68,68,0.3)] active:scale-[0.98] disabled:opacity-30"
+                  style={{ background: 'rgb(220,38,38)', color: 'white' }}>
+                  <svg width="14" height="11" viewBox="0 0 18 14" fill="white"><path d="M17.6 2.2C17.4 1.4 16.8.8 16 .6 14.6.2 9 .2 9 .2S3.4.2 2 .6C1.2.8.6 1.4.4 2.2 0 3.6 0 6.5 0 6.5s0 2.9.4 4.3c.2.8.8 1.4 1.6 1.6C3.4 12.8 9 12.8 9 12.8s5.6 0 7-.4c.8-.2 1.4-.8 1.6-1.6.4-1.4.4-4.3.4-4.3s0-2.9-.4-4.3zM7.2 9.3V3.7l4.7 2.8-4.7 2.8z"/></svg>
+                  Open in YouTube
+                </button>
               </div>
-              <button onClick={() => openInYouTube(infoModalTrack.url)} className="w-full p-3 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20 transition-colors border border-red-500/20 flex items-center justify-center gap-2 text-sm font-bold"><ExternalLink size={18} /> Open in YouTube</button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── DUPLICATE FINDER MODAL ── */}
+      {showYtImportModal && (
+        <YtImportModal
+          onClose={() => setShowYtImportModal(false)}
+          onSavePlaylist={(name, desc, tracks) => {
+            const id = `yt_${Date.now()}`;
+            setPlaylists(prev => [...prev, { id, name, description: desc || 'Imported from YouTube', tracks }]);
+            showToast(`"${name}" saved — ${tracks.length} tracks`);
+          }}
+          showToast={showToast}
+        />
+      )}
       {showCsvImportModal && (
         <CsvImportModal
           onClose={() => setShowCsvImportModal(false)}
-          onSavePlaylist={(name, tracks) => {
+          onSavePlaylist={(name, desc, tracks) => {
             const id = `csv_${Date.now()}`;
-            setPlaylists(prev => [...prev, { id, name, description: 'Imported from Spotify CSV', tracks }]);
-            setShowCsvImportModal(false);
-            showToast(`Playlist "${name}" saved — ${tracks.length} tracks`);
+            setPlaylists(prev => [...prev, { id, name, description: desc || 'Imported from Spotify', tracks }]);
+            showToast(`"${name}" saved — ${tracks.length} tracks`);
           }}
           showToast={showToast}
         />
