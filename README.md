@@ -35,8 +35,6 @@ Vanguard Player is a desktop music application built with Tauri (Rust backend) a
 - 🎚️ **Playback Speed Control** — Adjust speed without pitch distortion
 - 📤 **M3U Import / Export** — Interoperable playlist files
 - 🔊 **Audio Normalization** — Normalize loudness of downloaded files via `ffmpeg`
-- 🌐 **Landing Page** — Polished marketing site (`index.html`) with SEO, OG tags, and animated UI
-
 ---
 
 ## 🖥️ Supported Platforms
