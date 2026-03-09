@@ -25,7 +25,7 @@
     <meta name="twitter:url"         content="https://ishmweet.github.io/vanguard-music-player/">
     <meta name="twitter:title"       content="Vanguard Player — Open Source Music Player">
     <meta name="twitter:description" content="Ad-free, open-source music player for Windows and Linux. Zero tracking, zero paywalls. Just your music.">
-    <meta name="twitter:image"       content="https://ishmweet.github.io/vanguard-music-player/banner.png">
+    <meta name="twitter:image"       content="/banner.png">
 
     <!-- ── Favicon ── -->
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%234ff828'/%3E%3Cg transform='translate(3, 3)'%3E%3Cpath d='M9 18V5l12-2v13M9 9l12-2' stroke='%23000' stroke-width='2.5' fill='none'/%3E%3Ccircle cx='6' cy='18' r='3.2' fill='%23000'/%3E%3Ccircle cx='18' cy='16' r='3.2' fill='%23000'/%3E%3C/g%3E%3C/svg%3E" type="image/svg+xml">
@@ -907,6 +907,91 @@
         .nav-mobile-btn:hover { background: #3de020 !important; }
 
         /* ═══════════════════════════════════════
+           FEATURES SECTION
+        ═══════════════════════════════════════ */
+        .features-section {
+            padding: 100px 5%;
+            text-align: center;
+            position: relative;
+        }
+        .features-section .section-label {
+            display: inline-block;
+            color: var(--vanguard-green);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            opacity: 0.8;
+        }
+        .features-section h2 {
+            font-size: 42px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 14px;
+        }
+        .features-section > p {
+            color: var(--text-secondary);
+            font-size: 16px;
+            max-width: 520px;
+            margin: 0 auto 64px;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 28px 26px;
+            text-align: left;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(79,248,40,0.3), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .feature-card:hover {
+            border-color: rgba(79, 248, 40, 0.25);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.6), 0 0 30px rgba(79,248,40,0.05);
+            background: var(--bg-card-hover);
+        }
+        .feature-card:hover::before { opacity: 1; }
+        .feature-card.wide { grid-column: span 2; }
+        .feature-icon {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            background: var(--vanguard-green-dim);
+            border: 1px solid rgba(79,248,40,0.2);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 18px;
+            color: var(--vanguard-green);
+            flex-shrink: 0;
+        }
+        .feature-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            letter-spacing: -0.2px;
+        }
+        .feature-desc {
+            font-size: 13.5px;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+        /* ═══════════════════════════════════════
            SCREENSHOTS SECTION
         ═══════════════════════════════════════ */
         .screenshots-section {
@@ -1097,7 +1182,13 @@
             }
         }
 
-        /* ── General responsive ── */
+        /* ── Tablet: features 2-col, screenshots stack ── */
+        @media (max-width: 900px) {
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .feature-card.wide { grid-column: span 2; }
+        }
+
+        /* ── General responsive: hide desktop nav ── */
         @media (max-width: 600px) {
             .nav-links { display: none; }
             .nav-mobile-toggle { display: flex; }
@@ -1107,128 +1198,183 @@
         /* ════════════════════════════════════════
            COMPREHENSIVE MOBILE OPTIMIZATION
         ════════════════════════════════════════ */
+        /* ════════════════════════════════════════
+           MOBILE — 768px and below
+        ════════════════════════════════════════ */
         @media (max-width: 768px) {
 
             /* ── Global ── */
-            body { overflow-x: hidden; }
+            html, body { overflow-x: hidden; max-width: 100vw; }
+            * { -webkit-tap-highlight-color: transparent; }
+
+            /* ── GitHub corner — shrink so it doesn't eat nav ── */
+            .github-corner svg { width: 52px; height: 52px; }
 
             /* ── Nav ── */
-            nav { padding: 0 4%; }
-            .nav-brand { font-size: 16px; }
+            nav { padding: 0 5%; height: 56px; }
+            .nav-brand { font-size: 15px; gap: 8px; }
             .nav-logo-icon { width: 26px; height: 26px; }
-            .github-corner svg { width: 56px; height: 56px; }
 
             /* ── Hero ── */
             .hero {
-                padding: 90px 6% 40px;
+                padding: 86px 6% 56px;
                 min-height: auto;
-                padding-bottom: 60px;
             }
-            .hero-tag {
-                font-size: 11px;
-                letter-spacing: 1.5px;
-            }
+            .hero-tag { font-size: 11px; letter-spacing: 1.5px; }
             .hero-title {
-                font-size: clamp(30px, 9.5vw, 52px);
-                letter-spacing: -1px;
-                margin-bottom: 20px;
+                font-size: clamp(28px, 9vw, 48px);
+                letter-spacing: -0.5px;
+                margin-bottom: 18px;
+                word-break: break-word;
             }
             .hero-desc {
                 font-size: 15px;
+                line-height: 1.7;
                 margin-bottom: 32px;
-                padding: 0 4px;
+                padding: 0;
             }
             .hero-btn {
-                padding: 13px 26px;
+                padding: 14px 28px;
                 font-size: 15px;
                 width: 100%;
-                max-width: 280px;
+                max-width: 300px;
                 justify-content: center;
             }
 
             /* ── Download section ── */
             .download-section {
-                padding: 70px 5% 70px;
+                padding: 72px 5%;
                 min-height: auto;
             }
-            .download-section h2 { font-size: 30px; }
-            .download-section > p { font-size: 15px; margin-bottom: 36px; }
+            .download-section h2 { font-size: 28px; letter-spacing: -0.5px; }
+            .download-section > p { font-size: 14.5px; margin-bottom: 36px; }
             .download-buttons {
                 flex-direction: column;
                 align-items: center;
-                gap: 14px;
+                gap: 12px;
                 width: 100%;
             }
             .dl-btn-wrap {
                 width: 100%;
-                max-width: 320px;
+                max-width: 340px;
             }
             .dl-btn-trigger {
                 font-size: 14px;
-                height: 50px;
-                padding: 0 16px;
+                height: 52px;
+                padding: 0 18px;
+                border-radius: 12px;
             }
             .dl-btn-trigger-text img { width: 18px; height: 18px; }
+            .dl-dropdown-panel { border-radius: 0 0 12px 12px; }
+            .dl-dropdown-item { font-size: 13px; padding: 14px 18px; }
 
             /* ── Features section ── */
-            .features-section {
-                padding: 70px 5%;
-            }
-            .features-section h2 { font-size: 30px; letter-spacing: -0.5px; }
-            .features-section > p { font-size: 14.5px; margin-bottom: 44px; }
+            .features-section { padding: 72px 5%; }
+            .features-section h2 { font-size: 28px; letter-spacing: -0.5px; }
+            .features-section > p { font-size: 14.5px; margin-bottom: 40px; }
             .features-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .feature-card.wide { grid-column: span 1; }
+            .feature-card { padding: 20px 18px; border-radius: 12px; }
+            .feature-icon { width: 38px; height: 38px; border-radius: 10px; margin-bottom: 14px; }
+            .feature-title { font-size: 14px; }
+            .feature-desc { font-size: 13px; line-height: 1.6; }
+
+            /* ── Screenshots section ── */
+            .screenshots-section { padding: 72px 5%; }
+            .screenshots-section h2 { font-size: 28px; }
+            .screenshots-section > p { font-size: 14.5px; margin-bottom: 36px; }
+            .screenshots-grid {
                 grid-template-columns: 1fr;
                 gap: 14px;
             }
-            .feature-card.wide { grid-column: span 1; }
-            .feature-card { padding: 22px 20px; }
-            .feature-icon { width: 38px; height: 38px; margin-bottom: 14px; }
-            .feature-title { font-size: 14px; }
-            .feature-desc { font-size: 13px; }
-
-            /* ── Screenshots section ── */
-            .screenshots-section { padding: 70px 4%; }
-            .screenshots-section h2 { font-size: 28px; }
-            .screenshots-section > p { font-size: 14.5px; margin-bottom: 40px; }
-            .screenshots-grid { gap: 14px; }
             .screenshot-card { border-radius: 12px; }
+            /* Always show overlay at bottom on touch — no hover needed */
+            .screenshot-overlay {
+                transform: translateY(0) !important;
+                background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 55%, transparent 100%) !important;
+                padding: 44px 16px 16px !important;
+            }
+            .screenshot-card:hover .screenshot-img { transform: none; }
+            .screenshot-overlay-title { font-size: 13px; }
+            .screenshot-overlay-desc { font-size: 12px; line-height: 1.5; }
+            .screenshot-label { display: none; }
 
             /* ── FAQ section ── */
-            .faq-section {
-                padding: 70px 4%;
+            .faq-section { padding: 72px 5%; }
+            .faq-section h2 { font-size: 28px; letter-spacing: -0.5px; }
+            .faq-section > p { font-size: 14.5px; margin-bottom: 36px; }
+            .faq-question {
+                font-size: 13.5px;
+                padding: 16px 16px;
+                line-height: 1.5;
+                text-align: left;
+                word-break: break-word;
             }
-            .faq-section h2 { font-size: 30px; letter-spacing: -0.5px; }
-            .faq-section > p { font-size: 14.5px; margin-bottom: 40px; }
-            .faq-question { font-size: 14px; padding: 16px 18px; }
-            .faq-answer-inner { font-size: 13.5px; padding: 0 18px 18px; }
-            .faq-category-header { font-size: 10px; padding: 22px 2px 8px; }
+            .faq-icon { flex-shrink: 0; margin-left: 10px; }
+            .faq-answer-inner {
+                font-size: 13px;
+                padding: 0 16px 16px;
+                line-height: 1.65;
+                word-break: break-word;
+            }
+            .faq-answer-inner code {
+                word-break: break-all;
+                font-size: 11px;
+            }
+            .faq-category-header { font-size: 10px; padding: 20px 0 8px; gap: 6px; }
 
             /* ── Donate section ── */
             .donate-section {
-                padding: 60px 5% 90px;
+                padding: 64px 5% 80px;
                 min-height: auto;
             }
-            .donate-section h2 { font-size: 36px; }
-            .donate-desc { font-size: 15px; }
-            .donate-icon { width: 76px; height: 76px; }
-            .chai-btn { font-size: 14px; padding: 12px 22px; }
+            .donate-section h2 { font-size: 32px; }
+            .donate-desc { font-size: 14.5px; padding: 0 4px; }
+            .donate-icon { width: 72px; height: 72px; }
+            .chai-btn { font-size: 14px; padding: 13px 24px; width: 100%; max-width: 260px; justify-content: center; }
 
             /* ── Footer ── */
-            footer { padding: 22px 5%; font-size: 12px; }
+            footer {
+                padding: 20px 5%;
+                font-size: 12px;
+                text-align: center;
+                line-height: 1.7;
+            }
 
             /* ── Section dividers ── */
-            .section-divider { max-width: 90%; }
+            .section-divider { max-width: 88%; }
         }
 
-        /* Extra small phones */
-        @media (max-width: 390px) {
+        /* ── Small phones: 430px and below ── */
+        @media (max-width: 430px) {
             .hero-title {
-                font-size: clamp(26px, 8.5vw, 38px);
-                letter-spacing: -0.5px;
+                font-size: clamp(26px, 8.5vw, 36px);
+                letter-spacing: -0.3px;
             }
             .hero-desc { font-size: 14px; }
-            nav { padding: 0 3%; }
-            .nav-brand { font-size: 15px; gap: 8px; }
+            nav { padding: 0 4%; }
+            .nav-brand span { display: none; } /* hide text "Vanguard Player", show only logo icon */
+            .github-corner { display: none; } /* remove octocat — it overlaps badly at this size */
+            .features-section { padding: 60px 4%; }
+            .screenshots-section { padding: 60px 4%; }
+            .faq-section { padding: 60px 4%; }
+            .download-section { padding: 60px 4%; }
+            .donate-section { padding: 56px 4% 72px; }
+            .dl-btn-wrap { max-width: 100%; }
+            .faq-question { font-size: 13px; padding: 14px 14px; }
+            .faq-answer-inner { font-size: 12.5px; padding: 0 14px 14px; }
+        }
+
+        /* ── Very small: 360px and below ── */
+        @media (max-width: 360px) {
+            .hero-title { font-size: clamp(24px, 8vw, 32px); }
+            .features-section h2,
+            .screenshots-section h2,
+            .faq-section h2,
+            .download-section h2 { font-size: 24px; }
         }
     </style>
 </head>
@@ -1246,7 +1392,7 @@
     <div class="music-pattern"></div>
     <div class="neon-blur-circle"></div>
 
-    <!-- ── Nav: Home → Screenshots → FAQs → Donate → Download ── -->
+    <!-- ── Nav: Home → Features → Screenshots → FAQs → Donate → Download ── -->
     <nav id="main-nav">
         <a href="#" class="nav-brand">
             <div class="nav-logo-icon">
@@ -1256,6 +1402,7 @@
         </a>
         <div class="nav-links">
             <a href="#"             class="nav-link">Home</a>
+            <a href="#features"     class="nav-link">Features</a>
             <a href="#screenshots"  class="nav-link">Screenshots</a>
             <a href="#faqs"         class="nav-link">FAQs</a>
             <a href="#donate"       class="nav-link">Donate</a>
@@ -1267,6 +1414,7 @@
     </nav>
     <div class="nav-mobile-menu" id="nav-mobile-menu">
         <a href="#"             class="nav-mobile-link">Home</a>
+        <a href="#features"     class="nav-mobile-link">Features</a>
         <a href="#screenshots"  class="nav-mobile-link">Screenshots</a>
         <a href="#faqs"         class="nav-mobile-link">FAQs</a>
         <a href="#donate"       class="nav-mobile-link">Donate</a>
@@ -1374,6 +1522,125 @@
     <div class="section-divider"></div>
 
     <!-- ══════════════════════════════════════════
+         FEATURES SECTION
+    ══════════════════════════════════════════ -->
+    <section id="features" class="features-section">
+        <span class="section-label reveal-on-scroll">What's Inside</span>
+        <h2 class="reveal-on-scroll delay-100">Everything you need.<br>Nothing you don't.</h2>
+        <p class="reveal-on-scroll delay-200">Built for music lovers who want power without clutter — zero ads, zero tracking, just pure listening.</p>
+
+        <div class="features-grid">
+
+            <div class="feature-card reveal-on-scroll delay-100">
+                <div class="feature-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>
+                </div>
+                <div class="feature-title">YouTube Audio Streaming</div>
+                <div class="feature-desc">Search and stream any track directly from YouTube — no account, no API key, no ads. Pure audio, bypassing all video overhead via yt-dlp.</div>
+            </div>
+
+            <div class="feature-card reveal-on-scroll delay-200">
+                <div class="feature-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                </div>
+                <div class="feature-title">Local Music Library</div>
+                <div class="feature-desc">Import and manage your local MP3, FLAC, and audio files. Vanguard reads metadata tags and organises your collection automatically.</div>
+            </div>
+
+            <div class="feature-card reveal-on-scroll delay-300">
+                <div class="feature-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </div>
+                <div class="feature-title">Offline Downloads</div>
+                <div class="feature-desc">Save any track as a high-quality MP3 via the built-in yt-dlp extractor. Choose High (320kbps+), Medium (~128kbps), or Low quality. Listen anywhere — even without internet.</div>
+            </div>
+
+            <div class="feature-card wide reveal-on-scroll delay-100">
+                <div class="feature-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 17 21 12 16 7"/><polyline points="8 7 3 12 8 17"/></svg>
+                </div>
+                <div class="feature-title">Spotify &amp; YouTube Playlist Import</div>
+                <div class="feature-desc">Bring your playlists from anywhere. For Spotify: export a CSV via <a href="https://exportify.net" target="_blank" rel="noopener" style="color:var(--vanguard-green);text-decoration:none;">Exportify</a>, upload it and Vanguard auto-matches every track on YouTube — no Spotify login or API keys. For YouTube: paste any public playlist URL and all videos are imported instantly, no matching needed. Works with YouTube Music playlists too.</div>
+            </div>
+
+            <div class="feature-card reveal-on-scroll delay-200">
+                <div class="feature-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                </div>
+                <div class="feature-title">Playlists &amp; Queue</div>
+                <div class="feature-desc">Create, edit, and reorder unlimited playlists. Full queue management with drag-to-reorder, shuffle, and repeat support.</div>
+            </div>
+
+            <div class="feature-card reveal-on-scroll delay-100">
+                <div class="feature-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                </div>
+                <div class="feature-title">Precision Playback Controls</div>
+                <div class="feature-desc">Shuffle, repeat one or all, seek, volume, crossfade, and variable playback speed — with smooth progress tracking and animated now-playing indicators.</div>
+            </div>
+
+            <div class="feature-card reveal-on-scroll delay-200">
+                <div class="feature-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                </div>
+                <div class="feature-title">Sleep Timer</div>
+                <div class="feature-desc">Set an auto-pause timer from quick presets (5m – 90m) or a custom duration. Perfect for falling asleep to music without leaving it running all night.</div>
+            </div>
+
+            <div class="feature-card reveal-on-scroll delay-300">
+                <div class="feature-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                </div>
+                <div class="feature-title">Listening Stats</div>
+                <div class="feature-desc">Track your total listening time with a minimalist stats dashboard — hours, minutes, and seconds, all stored locally on your machine, never sent anywhere.</div>
+            </div>
+
+            <div class="feature-card reveal-on-scroll delay-100">
+                <div class="feature-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </div>
+                <div class="feature-title">Liked Songs</div>
+                <div class="feature-desc">Heart any track to instantly add it to your Liked Songs collection. Your favourites are always one click away, synced locally.</div>
+            </div>
+
+            <div class="feature-card wide reveal-on-scroll delay-200">
+                <div class="feature-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <div class="feature-title">Lightweight Rust + Tauri Core</div>
+                <div class="feature-desc">Unlike Electron-based players that consume hundreds of MB of RAM, Vanguard is built on Tauri and Rust — talking directly to the OS via IPC sockets (Unix) or named pipes (Windows). The result is a blazing-fast, sub-50MB install with minimal CPU and memory footprint, even with large libraries loaded.</div>
+            </div>
+
+            <div class="feature-card reveal-on-scroll delay-100">
+                <div class="feature-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div class="feature-title">Zero Telemetry. Zero Tracking.</div>
+                <div class="feature-desc">Absolutely no analytics, no crash reporters, no data collection of any kind. Everything — playlists, history, settings — stays on your machine.</div>
+            </div>
+
+            <div class="feature-card reveal-on-scroll delay-200">
+                <div class="feature-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </div>
+                <div class="feature-title">Audio Info Panel</div>
+                <div class="feature-desc">Inspect codec, bitrate, sample rate, channels, and format for any playing track — real metadata powered by ffprobe under the hood.</div>
+            </div>
+
+            <div class="feature-card reveal-on-scroll delay-300">
+                <div class="feature-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+                </div>
+                <div class="feature-title">Fully Open Source</div>
+                <div class="feature-desc">Every line of code is public on GitHub. Audit it, fork it, contribute to it. No hidden binaries, no obfuscation — community-driven, always.</div>
+            </div>
+
+        </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- ══════════════════════════════════════════
          SCREENSHOTS SECTION
     ══════════════════════════════════════════ -->
     <section id="screenshots" class="screenshots-section">
@@ -1391,128 +1658,197 @@
                     <div class="chrome-dot green"></div>
                 </div>
                 <svg class="screenshot-img" viewBox="0 0 1200 620" xmlns="http://www.w3.org/2000/svg" style="padding-top:32px;background:#0d0d0d;">
-                    <!-- Sidebar -->
-                    <rect x="0" y="0" width="220" height="620" fill="#0a0a0a"/>
-                    <rect x="0" y="0" width="220" height="620" fill="url(#sideGrad)"/>
                     <defs>
-                        <linearGradient id="sideGrad" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" stop-color="#111"/>
-                            <stop offset="100%" stop-color="#0d0d0d"/>
-                        </linearGradient>
                         <linearGradient id="progressGrad" x1="0" y1="0" x2="1" y2="0">
                             <stop offset="0%" stop-color="#4ff828"/>
                             <stop offset="100%" stop-color="#20d859"/>
                         </linearGradient>
-                        <linearGradient id="albumGrad" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0%" stop-color="#1a2a1a"/>
-                            <stop offset="100%" stop-color="#0a180a"/>
-                        </linearGradient>
-                        <filter id="glow1">
-                            <feGaussianBlur stdDeviation="8" result="blur"/>
-                            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                        </filter>
                     </defs>
-                    <!-- Logo in sidebar -->
-                    <rect x="18" y="20" width="26" height="26" rx="6" fill="#4ff828"/>
-                    <text x="54" y="37" font-family="Inter,sans-serif" font-size="13" font-weight="800" fill="#fff">Vanguard</text>
-                    <!-- Sidebar nav items -->
-                    <rect x="10" y="75" width="200" height="34" rx="8" fill="rgba(79,248,40,0.1)"/>
-                    <text x="42" y="97" font-family="Inter,sans-serif" font-size="13" fill="#4ff828" font-weight="600">Home</text>
-                    <text x="42" y="135" font-family="Inter,sans-serif" font-size="13" fill="#555">Library</text>
-                    <text x="42" y="170" font-family="Inter,sans-serif" font-size="13" fill="#555">Playlists</text>
-                    <text x="42" y="205" font-family="Inter,sans-serif" font-size="13" fill="#555">Downloads</text>
-                    <text x="42" y="240" font-family="Inter,sans-serif" font-size="13" fill="#555">Settings</text>
-                    <!-- Sidebar icons (simple circles) -->
-                    <circle cx="26" cy="93" r="6" fill="#4ff828" opacity="0.8"/>
-                    <circle cx="26" cy="131" r="6" fill="#333"/>
-                    <circle cx="26" cy="166" r="6" fill="#333"/>
-                    <circle cx="26" cy="201" r="6" fill="#333"/>
-                    <circle cx="26" cy="236" r="6" fill="#333"/>
-                    <!-- Sidebar playlist section -->
-                    <text x="18" y="295" font-family="Inter,sans-serif" font-size="10" fill="#444" letter-spacing="1.5">PLAYLISTS</text>
-                    <rect x="10" y="306" width="200" height="1" fill="#1e1e1e"/>
-                    <text x="18" y="330" font-family="Inter,sans-serif" font-size="12" fill="#555">Chill Vibes</text>
-                    <text x="18" y="355" font-family="Inter,sans-serif" font-size="12" fill="#555">Lo-fi Study</text>
-                    <text x="18" y="380" font-family="Inter,sans-serif" font-size="12" fill="#555">Late Night Drive</text>
-                    <text x="18" y="405" font-family="Inter,sans-serif" font-size="12" fill="#555">Workout Mix</text>
-                    <!-- Main content area -->
-                    <rect x="220" y="0" width="980" height="620" fill="#0d0d0d"/>
-                    <!-- Search bar -->
-                    <rect x="250" y="20" width="500" height="36" rx="10" fill="#161616" stroke="#242424" stroke-width="1"/>
-                    <text x="278" y="43" font-family="Inter,sans-serif" font-size="13" fill="#444">Search for songs, artists, albums...</text>
+
+                    <!-- ── Left Sidebar (220px) ── -->
+                    <rect x="0" y="0" width="220" height="620" fill="#0a0a0a"/>
+                    <rect x="219" y="0" width="1" height="620" fill="#1a1a1a"/>
+
+                    <!-- Logo -->
+                    <rect x="14" y="16" width="28" height="28" rx="7" fill="#4ff828"/>
+                    <text x="20" y="35" font-family="Inter,sans-serif" font-size="16" fill="#000" font-weight="900">♪</text>
+                    <text x="50" y="34" font-family="Inter,sans-serif" font-size="13" font-weight="800" fill="#4ff828" letter-spacing="0.5">VANGUARD</text>
+
+                    <!-- Sleep Timer row -->
+                    <rect x="8" y="54" width="204" height="30" rx="7" fill="#111" stroke="#1e1e1e" stroke-width="1"/>
+                    <text x="28" y="73" font-family="Inter,sans-serif" font-size="12" fill="#444">Sleep Timer</text>
+                    <text x="192" y="73" font-family="Inter,sans-serif" font-size="10" fill="#333">›</text>
+
+                    <!-- Nav: Home (active) -->
+                    <rect x="8" y="90" width="204" height="32" rx="8" fill="rgba(79,248,40,0.1)" stroke="rgba(79,248,40,0.2)" stroke-width="1"/>
+                    <circle cx="22" cy="106" r="5" fill="#4ff828"/>
+                    <text x="34" y="111" font-family="Inter,sans-serif" font-size="13" fill="#4ff828" font-weight="600">Home</text>
+
+                    <!-- Nav: Offline -->
+                    <circle cx="22" cy="142" r="5" fill="#2a2a2a"/>
+                    <text x="34" y="147" font-family="Inter,sans-serif" font-size="13" fill="#555">Offline</text>
+
+                    <!-- Nav: Stats -->
+                    <circle cx="22" cy="174" r="5" fill="#2a2a2a"/>
+                    <text x="34" y="179" font-family="Inter,sans-serif" font-size="13" fill="#555">Stats</text>
+
+                    <!-- Nav: Settings -->
+                    <circle cx="22" cy="206" r="5" fill="#2a2a2a"/>
+                    <text x="34" y="211" font-family="Inter,sans-serif" font-size="13" fill="#555">Settings</text>
+
+                    <!-- Nav: Queue (active-ish) -->
+                    <rect x="8" y="220" width="204" height="32" rx="8" fill="rgba(79,248,40,0.06)" stroke="rgba(79,248,40,0.15)" stroke-width="1"/>
+                    <circle cx="22" cy="236" r="5" fill="#4ff828" opacity="0.5"/>
+                    <text x="34" y="241" font-family="Inter,sans-serif" font-size="13" fill="#4ff828" font-weight="600">Queue</text>
+
+                    <!-- Playlists header -->
+                    <text x="14" y="275" font-family="Inter,sans-serif" font-size="10" fill="#2e2e2e" letter-spacing="2">PLAYLISTS</text>
+                    <rect x="8" y="282" width="204" height="1" fill="#1e1e1e"/>
+
+                    <!-- Liked Songs -->
+                    <rect x="10" y="290" width="30" height="30" rx="6" fill="#1a2a1a"/>
+                    <text x="22" y="310" font-family="Inter,sans-serif" font-size="13" fill="#4ff828" opacity="0.7">♥</text>
+                    <text x="46" y="308" font-family="Inter,sans-serif" font-size="12" fill="#777">Liked Songs</text>
+                    <text x="188" y="308" font-family="Inter,sans-serif" font-size="10" fill="#333">24</text>
+
+                    <!-- Late Night Drive -->
+                    <rect x="10" y="326" width="30" height="30" rx="6" fill="#1a1a2a"/>
+                    <text x="22" y="346" font-family="Inter,sans-serif" font-size="13" fill="#6688ff" opacity="0.5">♪</text>
+                    <text x="46" y="344" font-family="Inter,sans-serif" font-size="12" fill="#555">Late Night Drive</text>
+                    <text x="188" y="344" font-family="Inter,sans-serif" font-size="10" fill="#333">47</text>
+
+                    <!-- Chill Vibes -->
+                    <rect x="10" y="362" width="30" height="30" rx="6" fill="#2a1a10"/>
+                    <text x="22" y="382" font-family="Inter,sans-serif" font-size="13" fill="#ff8c00" opacity="0.5">♪</text>
+                    <text x="46" y="380" font-family="Inter,sans-serif" font-size="12" fill="#555">Chill Vibes</text>
+                    <text x="188" y="380" font-family="Inter,sans-serif" font-size="10" fill="#333">83</text>
+
+                    <!-- Import buttons -->
+                    <rect x="8" y="538" width="204" height="32" rx="8" fill="rgba(29,185,84,0.12)" stroke="rgba(29,185,84,0.3)" stroke-width="1"/>
+                    <circle cx="24" cy="554" r="7" fill="#1DB954"/>
+                    <text x="36" y="558" font-family="Inter,sans-serif" font-size="11" fill="#1DB954" font-weight="600">Import from Spotify</text>
+
+                    <rect x="8" y="576" width="204" height="32" rx="8" fill="rgba(255,0,0,0.1)" stroke="rgba(255,0,0,0.25)" stroke-width="1"/>
+                    <circle cx="24" cy="592" r="7" fill="#ff0000"/>
+                    <text x="36" y="596" font-family="Inter,sans-serif" font-size="11" fill="#ff5555" font-weight="600">Import from YouTube</text>
+
+                    <!-- ── Main content (220 → 970) ── -->
+                    <rect x="220" y="0" width="750" height="620" fill="#0d0d0d"/>
+
+                    <!-- Top bar -->
+                    <text x="236" y="22" font-family="Inter,sans-serif" font-size="10" fill="#2a2a2a" letter-spacing="1">HOME</text>
+                    <rect x="236" y="30" width="680" height="36" rx="10" fill="#161616" stroke="#1e1e1e" stroke-width="1"/>
+                    <circle cx="254" cy="48" r="5" fill="none" stroke="#333" stroke-width="1.5"/>
+                    <line x1="258" y1="52" x2="261" y2="55" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>
+                    <text x="268" y="52" font-family="Inter,sans-serif" font-size="12" fill="#333">Search YouTube...  (Ctrl+F)</text>
+                    <rect x="870" y="32" width="44" height="32" rx="7" fill="#1a1a1a" stroke="#222" stroke-width="1"/>
+                    <text x="881" y="52" font-family="Inter,sans-serif" font-size="11" fill="#555" font-weight="600">Search</text>
+
+                    <!-- Recently Played header -->
+                    <rect x="232" y="76" width="4" height="18" rx="2" fill="#4ff828"/>
+                    <text x="244" y="90" font-family="Inter,sans-serif" font-size="14" fill="#fff" font-weight="700">Recently Played</text>
+                    <text x="870" y="90" font-family="Inter,sans-serif" font-size="11" fill="#333">Clear</text>
+
+                    <!-- Row 1 col 1: Blinding Lights (active/green) -->
+                    <rect x="232" y="100" width="360" height="62" rx="10" fill="rgba(79,248,40,0.06)" stroke="rgba(79,248,40,0.2)" stroke-width="1"/>
+                    <rect x="244" y="111" width="40" height="40" rx="7" fill="#1a2a1a"/>
+                    <text x="258" y="137" font-family="Inter,sans-serif" font-size="18" fill="#4ff828" opacity="0.5">♪</text>
+                    <text x="294" y="126" font-family="Inter,sans-serif" font-size="11" fill="#4ff828" font-weight="700">Blinding Lights</text>
+                    <text x="294" y="143" font-family="Inter,sans-serif" font-size="10" fill="#444">The Weeknd</text>
+
+                    <!-- Row 1 col 2: As It Was -->
+                    <rect x="606" y="100" width="360" height="62" rx="10" fill="#111" stroke="#1e1e1e" stroke-width="1"/>
+                    <rect x="618" y="111" width="40" height="40" rx="7" fill="#1a1a2a"/>
+                    <text x="632" y="137" font-family="Inter,sans-serif" font-size="18" fill="#6688ff" opacity="0.5">♪</text>
+                    <text x="668" y="126" font-family="Inter,sans-serif" font-size="11" fill="#ccc" font-weight="600">As It Was</text>
+                    <text x="668" y="143" font-family="Inter,sans-serif" font-size="10" fill="#444">Harry Styles</text>
+
+                    <!-- Row 2 col 1: Heat Waves -->
+                    <rect x="232" y="170" width="360" height="62" rx="10" fill="#111" stroke="#1e1e1e" stroke-width="1"/>
+                    <rect x="244" y="181" width="40" height="40" rx="7" fill="#2a1a10"/>
+                    <text x="258" y="207" font-family="Inter,sans-serif" font-size="18" fill="#ff8c00" opacity="0.4">♪</text>
+                    <text x="294" y="196" font-family="Inter,sans-serif" font-size="11" fill="#ccc" font-weight="600">Heat Waves</text>
+                    <text x="294" y="213" font-family="Inter,sans-serif" font-size="10" fill="#444">Glass Animals</text>
+
+                    <!-- Row 2 col 2: Starboy -->
+                    <rect x="606" y="170" width="360" height="62" rx="10" fill="#111" stroke="#1e1e1e" stroke-width="1"/>
+                    <rect x="618" y="181" width="40" height="40" rx="7" fill="#10201a"/>
+                    <text x="632" y="207" font-family="Inter,sans-serif" font-size="18" fill="#44ffaa" opacity="0.4">♪</text>
+                    <text x="668" y="196" font-family="Inter,sans-serif" font-size="11" fill="#ccc" font-weight="600">Starboy</text>
+                    <text x="668" y="213" font-family="Inter,sans-serif" font-size="10" fill="#444">The Weeknd</text>
+
+                    <!-- Row 3 col 1: Levitating -->
+                    <rect x="232" y="240" width="360" height="62" rx="10" fill="#111" stroke="#1e1e1e" stroke-width="1"/>
+                    <rect x="244" y="251" width="40" height="40" rx="7" fill="#201020"/>
+                    <text x="258" y="277" font-family="Inter,sans-serif" font-size="18" fill="#cc44ff" opacity="0.4">♪</text>
+                    <text x="294" y="266" font-family="Inter,sans-serif" font-size="11" fill="#ccc" font-weight="600">Levitating</text>
+                    <text x="294" y="283" font-family="Inter,sans-serif" font-size="10" fill="#444">Dua Lipa</text>
+
+                    <!-- Row 3 col 2: Save Your Tears -->
+                    <rect x="606" y="240" width="360" height="62" rx="10" fill="#111" stroke="#1e1e1e" stroke-width="1"/>
+                    <rect x="618" y="251" width="40" height="40" rx="7" fill="#1a1a2a"/>
+                    <text x="632" y="277" font-family="Inter,sans-serif" font-size="18" fill="#aa44ff" opacity="0.4">♪</text>
+                    <text x="668" y="266" font-family="Inter,sans-serif" font-size="11" fill="#ccc" font-weight="600">Save Your Tears</text>
+                    <text x="668" y="283" font-family="Inter,sans-serif" font-size="10" fill="#444">The Weeknd</text>
+
+                    <!-- Row 4 col 1: Anti-Hero -->
+                    <rect x="232" y="310" width="360" height="62" rx="10" fill="#111" stroke="#1e1e1e" stroke-width="1"/>
+                    <rect x="244" y="321" width="40" height="40" rx="7" fill="#10201a"/>
+                    <text x="258" y="347" font-family="Inter,sans-serif" font-size="18" fill="#20d859" opacity="0.4">♪</text>
+                    <text x="294" y="336" font-family="Inter,sans-serif" font-size="11" fill="#ccc" font-weight="600">Anti-Hero</text>
+                    <text x="294" y="353" font-family="Inter,sans-serif" font-size="10" fill="#444">Taylor Swift</text>
+
+                    <!-- Row 4 col 2: Flowers -->
+                    <rect x="606" y="310" width="360" height="62" rx="10" fill="#111" stroke="#1e1e1e" stroke-width="1"/>
+                    <rect x="618" y="321" width="40" height="40" rx="7" fill="#201010"/>
+                    <text x="632" y="347" font-family="Inter,sans-serif" font-size="18" fill="#ff6644" opacity="0.4">♪</text>
+                    <text x="668" y="336" font-family="Inter,sans-serif" font-size="11" fill="#ccc" font-weight="600">Flowers</text>
+                    <text x="668" y="353" font-family="Inter,sans-serif" font-size="10" fill="#444">Miley Cyrus</text>
+
+                    <!-- ── Right Queue panel (970 → 1200) ── -->
+                    <rect x="970" y="0" width="230" height="620" fill="#0a0a0a"/>
+                    <rect x="970" y="0" width="1" height="620" fill="#1a1a1a"/>
+
+                    <!-- Queue header -->
+                    <text x="986" y="22" font-family="Inter,sans-serif" font-size="13" fill="#fff" font-weight="700">Queue</text>
+
+                    <!-- NOW PLAYING label -->
+                    <text x="986" y="48" font-family="Inter,sans-serif" font-size="9" fill="#2a2a2a" letter-spacing="1.5">NOW PLAYING</text>
+
                     <!-- Now playing card -->
-                    <rect x="250" y="80" width="680" height="260" rx="16" fill="url(#albumGrad)" stroke="#1e1e1e" stroke-width="1"/>
-                    <!-- Album art placeholder -->
-                    <rect x="274" y="104" width="140" height="140" rx="10" fill="#1a3020"/>
-                    <!-- Music note icon in album art -->
-                    <text x="320" y="186" font-family="Inter,sans-serif" font-size="52" fill="#4ff828" opacity="0.4">♪</text>
-                    <!-- Song info -->
-                    <text x="438" y="130" font-family="Inter,sans-serif" font-size="11" fill="#4ff828" letter-spacing="1.5" font-weight="600">NOW PLAYING</text>
-                    <text x="438" y="158" font-family="Inter,sans-serif" font-size="22" fill="#fff" font-weight="800">Midnight Echoes</text>
-                    <text x="438" y="182" font-family="Inter,sans-serif" font-size="14" fill="#666">Neon Drift · Synthwave Collection</text>
-                    <!-- Progress bar -->
-                    <rect x="438" y="204" width="460" height="4" rx="2" fill="#1e1e1e"/>
-                    <rect x="438" y="204" width="190" height="4" rx="2" fill="url(#progressGrad)"/>
-                    <circle cx="628" cy="206" r="7" fill="#4ff828" filter="url(#glow1)"/>
-                    <text x="438" y="226" font-family="Inter,sans-serif" font-size="11" fill="#555">1:54</text>
-                    <text x="876" y="226" font-family="Inter,sans-serif" font-size="11" fill="#555">4:12</text>
-                    <!-- Controls -->
-                    <text x="490" y="270" font-family="Inter,sans-serif" font-size="18" fill="#555">⇄</text>
-                    <text x="542" y="272" font-family="Inter,sans-serif" font-size="22" fill="#888">⏮</text>
-                    <circle cx="624" cy="258" r="24" fill="#4ff828"/>
-                    <text x="612" y="267" font-family="Inter,sans-serif" font-size="22" fill="#000">▶</text>
-                    <text x="656" y="272" font-family="Inter,sans-serif" font-size="22" fill="#888">⏭</text>
-                    <text x="702" y="270" font-family="Inter,sans-serif" font-size="18" fill="#555">↻</text>
+                    <rect x="978" y="56" width="214" height="56" rx="8" fill="rgba(79,248,40,0.06)" stroke="rgba(79,248,40,0.15)" stroke-width="1"/>
+                    <rect x="986" y="64" width="38" height="38" rx="6" fill="#1a2a1a"/>
+                    <text x="999" y="88" font-family="Inter,sans-serif" font-size="16" fill="#4ff828" opacity="0.5">♪</text>
+                    <text x="1032" y="78" font-family="Inter,sans-serif" font-size="10" fill="#4ff828" font-weight="600">Blinding Lights</text>
+                    <text x="1032" y="93" font-family="Inter,sans-serif" font-size="10" fill="#444">The Weeknd</text>
+
+                    <!-- Queue empty -->
+                    <text x="1085" y="340" font-family="Inter,sans-serif" font-size="11" fill="#2a2a2a" text-anchor="middle">Queue is empty</text>
+
+                    <!-- ── Bottom player bar ── -->
+                    <rect x="220" y="566" width="750" height="54" fill="#111" stroke="#1e1e1e" stroke-width="1"/>
+                    <!-- Album thumb -->
+                    <rect x="230" y="574" width="36" height="36" rx="6" fill="#1a2a1a"/>
+                    <text x="242" y="598" font-family="Inter,sans-serif" font-size="16" fill="#4ff828" opacity="0.5">♪</text>
+                    <!-- Track info -->
+                    <text x="274" y="587" font-family="Inter,sans-serif" font-size="11" fill="#fff" font-weight="600">Blinding Lights</text>
+                    <text x="274" y="601" font-family="Inter,sans-serif" font-size="10" fill="#444">The Weeknd</text>
+                    <!-- Playback controls -->
+                    <text x="496" y="599" font-family="Inter,sans-serif" font-size="14" fill="#555">⇄</text>
+                    <text x="528" y="600" font-family="Inter,sans-serif" font-size="18" fill="#888">⏮</text>
+                    <circle cx="578" cy="591" r="17" fill="#fff"/>
+                    <text x="570" y="598" font-family="Inter,sans-serif" font-size="16" fill="#000">▶</text>
+                    <text x="602" y="600" font-family="Inter,sans-serif" font-size="18" fill="#888">⏭</text>
+                    <text x="634" y="599" font-family="Inter,sans-serif" font-size="14" fill="#555">↻</text>
+                    <!-- Progress -->
+                    <text x="664" y="597" font-family="Inter,sans-serif" font-size="9" fill="#333">0:00</text>
+                    <rect x="686" y="589" width="190" height="3" rx="1.5" fill="#1e1e1e"/>
+                    <rect x="686" y="589" width="0" height="3" rx="1.5" fill="#4ff828"/>
+                    <text x="882" y="597" font-family="Inter,sans-serif" font-size="9" fill="#333">4:23</text>
                     <!-- Volume -->
-                    <text x="760" y="270" font-family="Inter,sans-serif" font-size="13" fill="#555">🔊</text>
-                    <rect x="784" y="258" width="100" height="3" rx="2" fill="#1e1e1e"/>
-                    <rect x="784" y="258" width="72" height="3" rx="2" fill="#4ff828" opacity="0.6"/>
-                    <!-- Queue section -->
-                    <text x="952" y="100" font-family="Inter,sans-serif" font-size="11" fill="#444" letter-spacing="1.5">UP NEXT</text>
-                    <rect x="952" y="112" width="218" height="52" rx="10" fill="#141414" stroke="#222" stroke-width="1"/>
-                    <rect x="964" y="122" width="36" height="36" rx="6" fill="#1a2a1a"/>
-                    <text x="980" y="147" font-family="Inter,sans-serif" font-size="14" fill="#4ff828" opacity="0.5">♪</text>
-                    <text x="1010" y="136" font-family="Inter,sans-serif" font-size="12" fill="#ccc" font-weight="600">Starlight Drive</text>
-                    <text x="1010" y="153" font-family="Inter,sans-serif" font-size="11" fill="#555">Solar Fields</text>
-                    <rect x="952" y="172" width="218" height="52" rx="10" fill="#111" stroke="#1a1a1a" stroke-width="1"/>
-                    <rect x="964" y="182" width="36" height="36" rx="6" fill="#1a1a2a"/>
-                    <text x="980" y="207" font-family="Inter,sans-serif" font-size="14" fill="#4488ff" opacity="0.5">♪</text>
-                    <text x="1010" y="196" font-family="Inter,sans-serif" font-size="12" fill="#888" font-weight="600">Neon Rain</text>
-                    <text x="1010" y="213" font-family="Inter,sans-serif" font-size="11" fill="#444">Lazerhawk</text>
-                    <rect x="952" y="232" width="218" height="52" rx="10" fill="#111" stroke="#1a1a1a" stroke-width="1"/>
-                    <rect x="964" y="242" width="36" height="36" rx="6" fill="#2a1a1a"/>
-                    <text x="980" y="267" font-family="Inter,sans-serif" font-size="14" fill="#ff4488" opacity="0.5">♪</text>
-                    <text x="1010" y="256" font-family="Inter,sans-serif" font-size="12" fill="#888" font-weight="600">Electric Dreams</text>
-                    <text x="1010" y="273" font-family="Inter,sans-serif" font-size="11" fill="#444">Perturbator</text>
-                    <!-- Recommended section title -->
-                    <text x="250" y="374" font-family="Inter,sans-serif" font-size="14" fill="#fff" font-weight="700">Recommended for you</text>
-                    <!-- Track list rows -->
-                    <rect x="250" y="388" width="680" height="44" rx="8" fill="rgba(255,255,255,0.02)"/>
-                    <text x="272" y="415" font-family="Inter,sans-serif" font-size="12" fill="#777">1</text>
-                    <rect x="290" y="396" width="30" height="30" rx="5" fill="#1a2a1a"/>
-                    <text x="334" y="415" font-family="Inter,sans-serif" font-size="13" fill="#ccc" font-weight="500">Crystal Skies</text>
-                    <text x="540" y="415" font-family="Inter,sans-serif" font-size="12" fill="#555">Dreamwave</text>
-                    <text x="840" y="415" font-family="Inter,sans-serif" font-size="12" fill="#555">3:47</text>
-                    <rect x="250" y="436" width="680" height="44" rx="8" fill="rgba(255,255,255,0)"/>
-                    <text x="272" y="463" font-family="Inter,sans-serif" font-size="12" fill="#777">2</text>
-                    <rect x="290" y="444" width="30" height="30" rx="5" fill="#1a1a2a"/>
-                    <text x="334" y="463" font-family="Inter,sans-serif" font-size="13" fill="#ccc" font-weight="500">Parallel Universe</text>
-                    <text x="540" y="463" font-family="Inter,sans-serif" font-size="12" fill="#555">Kavinsky</text>
-                    <text x="840" y="463" font-family="Inter,sans-serif" font-size="12" fill="#555">5:02</text>
-                    <rect x="250" y="484" width="680" height="44" rx="8" fill="rgba(255,255,255,0.02)"/>
-                    <text x="272" y="511" font-family="Inter,sans-serif" font-size="12" fill="#777">3</text>
-                    <rect x="290" y="492" width="30" height="30" rx="5" fill="#2a1a1a"/>
-                    <text x="334" y="511" font-family="Inter,sans-serif" font-size="13" fill="#ccc" font-weight="500">After Hours</text>
-                    <text x="540" y="511" font-family="Inter,sans-serif" font-size="12" fill="#555">FM-84</text>
-                    <text x="840" y="511" font-family="Inter,sans-serif" font-size="12" fill="#555">4:28</text>
-                    <rect x="250" y="532" width="680" height="44" rx="8" fill="rgba(255,255,255,0)"/>
-                    <text x="272" y="559" font-family="Inter,sans-serif" font-size="12" fill="#777">4</text>
-                    <rect x="290" y="540" width="30" height="30" rx="5" fill="#1a2a20"/>
-                    <text x="334" y="559" font-family="Inter,sans-serif" font-size="13" fill="#ccc" font-weight="500">Resonance</text>
-                    <text x="540" y="559" font-family="Inter,sans-serif" font-size="12" fill="#555">HOME</text>
-                    <text x="840" y="559" font-family="Inter,sans-serif" font-size="12" fill="#555">3:58</text>
-                    <!-- Green scanline accent -->
-                    <rect x="220" y="0" width="2" height="620" fill="url(#progressGrad)" opacity="0.2"/>
+                    <text x="904" y="597" font-family="Inter,sans-serif" font-size="11" fill="#555">🔊</text>
+                    <rect x="922" y="589" width="40" height="3" rx="1.5" fill="#1e1e1e"/>
+                    <rect x="922" y="589" width="30" height="3" rx="1.5" fill="#4ff828" opacity="0.7"/>
                 </svg>
                 <div class="screenshot-chrome" style="background:rgba(14,14,14,0.95);">
                     <div class="chrome-dot red"></div>
@@ -1606,41 +1942,49 @@
                             <stop offset="100%" stop-color="#20d859"/>
                         </linearGradient>
                     </defs>
-                    <!-- Import header -->
-                    <text x="20" y="44" font-family="Inter,sans-serif" font-size="20" fill="#fff" font-weight="800">Import Spotify Playlist</text>
-                    <text x="20" y="66" font-family="Inter,sans-serif" font-size="13" fill="#555">Paste your public Spotify playlist link below</text>
-                    <!-- URL input -->
-                    <rect x="20" y="84" width="430" height="42" rx="10" fill="#161616" stroke="#242424" stroke-width="1"/>
-                    <text x="36" y="110" font-family="Inter,sans-serif" font-size="12" fill="#666">https://open.spotify.com/playlist/37i9dQZF1DX...</text>
-                    <rect x="458" y="84" width="102" height="42" rx="10" fill="url(#pg3)"/>
-                    <text x="477" y="110" font-family="Inter,sans-serif" font-size="13" fill="#000" font-weight="700">Import</text>
+                    <!-- Header with Spotify icon -->
+                    <rect x="20" y="18" width="28" height="28" rx="7" fill="#1DB954"/>
+                    <text x="28" y="37" font-family="Inter,sans-serif" font-size="14" fill="#fff" font-weight="900">S</text>
+                    <text x="56" y="36" font-family="Inter,sans-serif" font-size="16" fill="#fff" font-weight="800">Import Spotify Playlist</text>
+                    <!-- Step 1 -->
+                    <circle cx="30" cy="72" r="9" fill="#4ff828"/>
+                    <text x="27" y="76" font-family="Inter,sans-serif" font-size="10" fill="#000" font-weight="800">1</text>
+                    <text x="48" y="70" font-family="Inter,sans-serif" font-size="12" fill="#fff" font-weight="600">Go to Exportify</text>
+                    <text x="48" y="84" font-family="Inter,sans-serif" font-size="11" fill="#555">Open exportify.net in your browser</text>
+                    <!-- Step 2 -->
+                    <circle cx="30" cy="112" r="9" fill="#4ff828"/>
+                    <text x="27" y="116" font-family="Inter,sans-serif" font-size="10" fill="#000" font-weight="800">2</text>
+                    <text x="48" y="110" font-family="Inter,sans-serif" font-size="12" fill="#fff" font-weight="600">Log in with Spotify</text>
+                    <text x="48" y="124" font-family="Inter,sans-serif" font-size="11" fill="#555">Authorise Exportify to read your playlists</text>
+                    <!-- Step 3 -->
+                    <circle cx="30" cy="152" r="9" fill="#4ff828"/>
+                    <text x="27" y="156" font-family="Inter,sans-serif" font-size="10" fill="#000" font-weight="800">3</text>
+                    <text x="48" y="150" font-family="Inter,sans-serif" font-size="12" fill="#fff" font-weight="600">Export your playlist</text>
+                    <text x="48" y="164" font-family="Inter,sans-serif" font-size="11" fill="#555">Click the green Export button — a .csv file will download</text>
+                    <!-- Step 4 -->
+                    <circle cx="30" cy="192" r="9" fill="#4ff828"/>
+                    <text x="27" y="196" font-family="Inter,sans-serif" font-size="10" fill="#000" font-weight="800">4</text>
+                    <text x="48" y="190" font-family="Inter,sans-serif" font-size="12" fill="#fff" font-weight="600">Upload the CSV here</text>
+                    <text x="48" y="204" font-family="Inter,sans-serif" font-size="11" fill="#555">Click the button below and select the .csv file</text>
+                    <!-- Upload CSV button -->
+                    <rect x="20" y="222" width="540" height="44" rx="11" fill="url(#pg3)"/>
+                    <text x="185" y="249" font-family="Inter,sans-serif" font-size="14" fill="#000" font-weight="800">⬆  Upload Exportify CSV</text>
                     <!-- Progress -->
-                    <text x="20" y="154" font-family="Inter,sans-serif" font-size="11" fill="#4ff828" letter-spacing="1">FETCHING TRACKS · 18 / 24</text>
-                    <rect x="20" y="162" width="540" height="5" rx="2.5" fill="#1e1e1e"/>
-                    <rect x="20" y="162" width="405" height="5" rx="2.5" fill="url(#pg3)"/>
-                    <!-- Imported tracks -->
-                    <rect x="20" y="182" width="540" height="44" rx="8" fill="rgba(79,248,40,0.04)" stroke="rgba(79,248,40,0.1)" stroke-width="1"/>
-                    <text x="36" y="208" font-family="Inter,sans-serif" font-size="13" fill="#ccc">Blinding Lights</text>
-                    <text x="240" y="208" font-family="Inter,sans-serif" font-size="12" fill="#555">The Weeknd</text>
-                    <text x="490" y="208" font-family="Inter,sans-serif" font-size="11" fill="#4ff828">✓ Matched</text>
-
-                    <rect x="20" y="230" width="540" height="44" rx="8" fill="rgba(79,248,40,0.04)" stroke="rgba(79,248,40,0.1)" stroke-width="1"/>
-                    <text x="36" y="256" font-family="Inter,sans-serif" font-size="13" fill="#ccc">As It Was</text>
-                    <text x="240" y="256" font-family="Inter,sans-serif" font-size="12" fill="#555">Harry Styles</text>
-                    <text x="490" y="256" font-family="Inter,sans-serif" font-size="11" fill="#4ff828">✓ Matched</text>
-
-                    <rect x="20" y="278" width="540" height="44" rx="8" fill="rgba(79,248,40,0.04)" stroke="rgba(79,248,40,0.1)" stroke-width="1"/>
-                    <text x="36" y="304" font-family="Inter,sans-serif" font-size="13" fill="#ccc">Heat Waves</text>
-                    <text x="240" y="304" font-family="Inter,sans-serif" font-size="12" fill="#555">Glass Animals</text>
-                    <text x="490" y="304" font-family="Inter,sans-serif" font-size="11" fill="#4ff828">✓ Matched</text>
-
-                    <rect x="20" y="326" width="540" height="44" rx="8" fill="#111" stroke="#1e1e1e" stroke-width="1"/>
-                    <text x="36" y="352" font-family="Inter,sans-serif" font-size="13" fill="#777">Stay</text>
-                    <text x="240" y="352" font-family="Inter,sans-serif" font-size="12" fill="#444">The Kid LAROI</text>
-                    <text x="476" y="352" font-family="Inter,sans-serif" font-size="11" fill="#555">⟳ Fetching...</text>
-
-                    <rect x="20" y="374" width="540" height="30" rx="8" fill="#0f0f0f"/>
-                    <text x="36" y="394" font-family="Inter,sans-serif" font-size="12" fill="#444">Anti-Hero · Taylor Swift</text>
+                    <rect x="20" y="280" width="540" height="1" fill="#1e1e1e"/>
+                    <text x="20" y="300" font-family="Inter,sans-serif" font-size="10" fill="#4ff828" letter-spacing="1.5">MATCHING · 18 / 24</text>
+                    <rect x="20" y="308" width="540" height="4" rx="2" fill="#1e1e1e"/>
+                    <rect x="20" y="308" width="405" height="4" rx="2" fill="url(#pg3)"/>
+                    <!-- Matched rows -->
+                    <rect x="20" y="322" width="540" height="36" rx="7" fill="rgba(79,248,40,0.05)" stroke="rgba(79,248,40,0.12)" stroke-width="1"/>
+                    <rect x="28" y="330" width="20" height="20" rx="4" fill="#1a2a1a"/>
+                    <text x="58" y="344" font-family="Inter,sans-serif" font-size="12" fill="#ccc">Blinding Lights</text>
+                    <text x="240" y="344" font-family="Inter,sans-serif" font-size="11" fill="#555">The Weeknd</text>
+                    <text x="492" y="344" font-family="Inter,sans-serif" font-size="10" fill="#4ff828">✓ Matched</text>
+                    <rect x="20" y="362" width="540" height="36" rx="7" fill="rgba(79,248,40,0.05)" stroke="rgba(79,248,40,0.12)" stroke-width="1"/>
+                    <rect x="28" y="370" width="20" height="20" rx="4" fill="#1a1a2a"/>
+                    <text x="58" y="384" font-family="Inter,sans-serif" font-size="12" fill="#ccc">Heat Waves</text>
+                    <text x="240" y="384" font-family="Inter,sans-serif" font-size="11" fill="#555">Glass Animals</text>
+                    <text x="492" y="384" font-family="Inter,sans-serif" font-size="10" fill="#4ff828">✓ Matched</text>
                 </svg>
                 <div class="screenshot-chrome">
                     <div class="chrome-dot red"></div>
@@ -1654,7 +1998,7 @@
                 <div class="screenshot-overlay">
                     <div class="screenshot-overlay-tag">Import</div>
                     <div class="screenshot-overlay-title">Bring your Spotify playlists over</div>
-                    <div class="screenshot-overlay-desc">Paste a Spotify link and Vanguard auto-matches every track. Your curation, your way.</div>
+                    <div class="screenshot-overlay-desc">Export via Exportify, upload the CSV — Vanguard matches every track automatically.</div>
                 </div>
             </div>
 
@@ -1684,7 +2028,7 @@
                         <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
                     </button>
                     <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">Yes! Vanguard Player is 100% free and open-source. There are absolutely no paywalls, premium tiers, or hidden fees.</div>
+                        <div class="faq-answer-inner">Yes! Vanguard Player is 100% free and open-source. There are absolutely no paywalls, premium tiers, or hidden fees — and never will be.</div>
                     </div>
                 </div>
                 <div class="faq-item">
@@ -1693,7 +2037,7 @@
                         <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
                     </button>
                     <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">Vanguard Player searches and streams audio directly from YouTube. However, it completely bypasses the video rendering, giving you a lightweight, high-fidelity audio stream without eating up your computer's bandwidth or resources.</div>
+                        <div class="faq-answer-inner">Vanguard streams audio directly from YouTube using <strong style="color:#fff">yt-dlp</strong> under the hood. It extracts only the audio stream — no video is ever downloaded or rendered — giving you a clean, high-fidelity playback with minimal bandwidth usage. You can also play your own local files (MP3, FLAC, etc.) from the Offline section.</div>
                     </div>
                 </div>
                 <div class="faq-item">
@@ -1702,7 +2046,7 @@
                         <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
                     </button>
                     <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">Not at all. Vanguard Player works completely independently. You do not need to log in to any account, configure API keys, or have a premium subscription to enjoy ad-free listening.</div>
+                        <div class="faq-answer-inner">No. Vanguard uses <strong style="color:#fff">yt-dlp</strong> directly — no YouTube account, no API key, and no Premium subscription needed. Everything works out of the box.</div>
                     </div>
                 </div>
                 <div class="faq-item">
@@ -1711,7 +2055,7 @@
                         <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
                     </button>
                     <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">Yes! You can extract and download any track directly to your local storage as an MP3. You can even customize the audio extraction quality (High, Medium, Low) and pick your exact download destination in the app settings.</div>
+                        <div class="faq-answer-inner">Yes! Any track can be downloaded as an MP3 directly to your local storage via the built-in yt-dlp extractor. You can choose download quality — <strong style="color:#fff">High</strong> (best available, 320kbps+), <strong style="color:#fff">Medium</strong> (~128kbps), or <strong style="color:#fff">Low</strong> (smallest file size) — and set your preferred download folder in Settings. Downloaded tracks appear in the <strong style="color:#fff">Offline</strong> section and play without any internet connection.</div>
                     </div>
                 </div>
                 <div class="faq-item">
@@ -1720,7 +2064,7 @@
                         <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
                     </button>
                     <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">Yes! You can easily import your existing Spotify playlists directly into Vanguard Player. Simply provide your Spotify playlist link, and the app will automatically fetch and match the tracks so you don't lose your carefully curated libraries.</div>
+                        <div class="faq-answer-inner">Yes! Export your Spotify playlist as a CSV using <a href="https://exportify.net" target="_blank" rel="noopener" style="color:var(--vanguard-green);">Exportify</a> (free, no extra software), then upload the CSV inside Vanguard. It runs up to 12 parallel YouTube searches to auto-match every track and rebuild your playlist — no Spotify login inside the app, no API keys required. You can also import any public <strong style="color:#fff">YouTube or YouTube Music playlist</strong> directly by pasting its URL — tracks are imported instantly with no matching step needed.</div>
                     </div>
                 </div>
             </div>
@@ -1748,7 +2092,7 @@
                         <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
                     </button>
                     <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">Vanguard Player requires <strong style="color:#fff">mpv</strong>, <strong style="color:#fff">yt-dlp</strong>, and <strong style="color:#fff">ffprobe</strong> to function. These are managed directly inside the app via the built-in <strong style="color:#fff">Dependencies</strong> screen — you can check their status, see version info, and install or update them all in one click using your system's package manager (apt, pacman, dnf, winget, brew). No manual terminal work needed.</div>
+                        <div class="faq-answer-inner">Vanguard requires <strong style="color:#fff">mpv</strong> (audio playback), <strong style="color:#fff">yt-dlp</strong> (YouTube streaming &amp; downloads), and <strong style="color:#fff">ffprobe</strong> (metadata &amp; waveforms) to function. You don't need to install them manually — the built-in <strong style="color:#fff">Dependencies</strong> screen in Settings lets you check status, view version info, and install or update everything in one click using your system's package manager (apt, pacman, dnf, winget, brew).</div>
                     </div>
                 </div>
                 <div class="faq-item">
@@ -1757,7 +2101,7 @@
                         <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
                     </button>
                     <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">Yes, you need an active internet connection to search for and stream new music. However, any tracks you have downloaded using the built-in MP3 extractor are saved to your local Music directory and can be played anytime through the <strong style="color:#fff">Offline</strong> section directly inside Vanguard Player — no internet required.</div>
+                        <div class="faq-answer-inner">An internet connection is needed to search and stream music from YouTube. However, any track you've downloaded via the built-in extractor is saved locally and available anytime through the <strong style="color:#fff">Offline</strong> section — fully playable without any internet. Your local music files also work completely offline.</div>
                     </div>
                 </div>
             </div>
@@ -1776,7 +2120,7 @@
                         <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
                     </button>
                     <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">No. Vanguard Player is built for absolute privacy. There is zero telemetry, zero tracking, and zero ads. Your data, playlists, and listening habits stay entirely locally on your own machine.</div>
+                        <div class="faq-answer-inner">No. There is zero telemetry, zero analytics, and zero data collection of any kind. The only stats Vanguard tracks are your <strong style="color:#fff">total listening time</strong> — stored entirely in your browser's local storage, never sent anywhere. Your playlists, history, and settings never leave your machine.</div>
                     </div>
                 </div>
                 <div class="faq-item">
@@ -1785,7 +2129,7 @@
                         <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
                     </button>
                     <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">Instead of using heavy web wrappers like Electron, Vanguard Player is built using <strong style="color:#fff">Tauri and Rust</strong>. This allows the app to interact directly with your operating system, keeping RAM and CPU usage incredibly low while maintaining a strikingly sleek React UI.</div>
+                        <div class="faq-answer-inner">Vanguard is built on <strong style="color:#fff">Tauri + Rust</strong> instead of Electron, meaning the backend talks directly to the OS via IPC sockets (Linux) or named pipes (Windows) rather than spinning up a full Chromium browser. The result is a sub-50MB install that uses a fraction of the RAM of typical music players, even with large playlists loaded.</div>
                     </div>
                 </div>
                 <div class="faq-item">
@@ -1794,7 +2138,7 @@
                         <span class="faq-icon"><svg viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg></span>
                     </button>
                     <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">Under the hood, it utilizes <strong style="color:#fff">yt-dlp</strong> for lightning-fast, secure audio scraping, and <strong style="color:#fff">mpv</strong> as the highly versatile background audio engine, communicating seamlessly via Unix IPC sockets.</div>
+                        <div class="faq-answer-inner"><strong style="color:#fff">yt-dlp</strong> handles audio extraction and YouTube streaming with up to 12 concurrent searches for playlist imports. <strong style="color:#fff">mpv</strong> is the audio engine, controlled via a Unix IPC socket (<code style="color:#4ff828;font-size:12px;">/tmp/mpvsocket</code>) on Linux and a named pipe (<code style="color:#4ff828;font-size:12px;">\\.\pipe\mpvsocket</code>) on Windows. <strong style="color:#fff">ffprobe</strong> powers the Audio Info panel (codec, bitrate, sample rate, channels). Vanguard also exposes variable playback speed, crossfade, and loudness normalisation — all piped directly into mpv's audio filter chain.</div>
                     </div>
                 </div>
             </div>
