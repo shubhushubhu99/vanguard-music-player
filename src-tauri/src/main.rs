@@ -19,20 +19,32 @@ const SOCKET_PATH: &str = "/tmp/mpvsocket";
 const SOCKET_PATH: &str = r"\\.\pipe\mpvsocket";
 
 // ── Binary path resolution ────────────────────────────────────────────────────
-// Resolves full path for a binary by scanning the filesystem directly.
-// Does NOT call Command::new() to avoid chicken-and-egg PATH issues.
+
 fn resolve_bin(name: &str, search_paths: &[String]) -> String {
     for dir in search_paths {
+        #[cfg(target_os = "windows")]
+        let full = format!("{}\\{}.exe", dir, name);
+        #[cfg(not(target_os = "windows"))]
         let full = format!("{}/{}", dir, name);
-        if std::path::Path::new(&full).is_file() {
+
+        let p = std::path::Path::new(&full);
+        if p.is_file() {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                if let Ok(meta) = p.metadata() {
+                    if meta.permissions().mode() & 0o111 != 0 {
+                        return full;
+                    }
+                }
+            }
+            #[cfg(windows)]
             return full;
         }
     }
-    // Last resort: bare name
     name.to_string()
 }
 
-// Global resolved binary paths — set once at startup before Tauri launches
 static BIN_MPV:     std::sync::OnceLock<String> = std::sync::OnceLock::new();
 static BIN_YTDLP:   std::sync::OnceLock<String> = std::sync::OnceLock::new();
 static BIN_FFPROBE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
@@ -40,37 +52,70 @@ static BIN_FFMPEG:  std::sync::OnceLock<String> = std::sync::OnceLock::new();
 
 fn init_bin_paths() {
     let home = std::env::var("HOME").unwrap_or_default();
+    let mut paths: Vec<String> = Vec::new();
 
-    // Build search path list — order matters, first match wins
-    let mut paths: Vec<String> = vec![
-        format!("{}/.local/bin", home),
-        format!("{}/.cargo/bin", home),
-        "/usr/local/bin".into(),
-        "/usr/bin".into(),
-        "/bin".into(),
-        "/snap/bin".into(),
-        "/var/lib/flatpak/exports/bin".into(),
-        "/usr/games".into(),
-        "/opt/homebrew/bin".into(),
-        "/home/linuxbrew/.linuxbrew/bin".into(),
-        format!("{}/bin", home),
-    ];
+    #[cfg(target_os = "windows")]
+    {
+        let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_default();
+        let user_profile   = std::env::var("USERPROFILE").unwrap_or_default();
+        // Vanguard's own deps folder (populated by install_dependencies)
+        paths.push(format!("{}\\Programs\\vanguard-deps\\mpv",    local_app_data));
+        paths.push(format!("{}\\Programs\\vanguard-deps\\ffmpeg",  local_app_data));
+        paths.push(format!("{}\\Programs\\vanguard-deps",          local_app_data));
+        // Common Windows install locations
+        paths.push(format!("{}\\Programs\\mpv",    local_app_data));
+        paths.push("C:\\Program Files\\mpv".into());
+        paths.push("C:\\Program Files (x86)\\mpv".into());
+        paths.push("C:\\ProgramData\\chocolatey\\bin".into());
+        paths.push(format!("{}\\scoop\\shims", user_profile));
+        paths.push(format!("{}\\AppData\\Local\\Microsoft\\WindowsApps", user_profile));
+    }
 
-    // Also append whatever PATH currently contains
-    if let Ok(env_path) = std::env::var("PATH") {
-        for p in env_path.split(':') {
-            let s = p.to_string();
-            if !paths.contains(&s) {
-                paths.push(s);
-            }
+    #[cfg(not(target_os = "windows"))]
+    {
+        // AppImage: search host fs via /proc/1/root first
+        let appimage = std::env::var("APPIMAGE").is_ok();
+        let host = if appimage { "/proc/1/root" } else { "" };
+
+        for p in &[
+            format!("{}/.local/bin", home),
+            format!("{}/.cargo/bin", home),
+            "/usr/local/bin".to_string(),
+            "/usr/bin".to_string(),
+            "/bin".to_string(),
+            "/snap/bin".to_string(),
+            "/var/lib/flatpak/exports/bin".to_string(),
+            "/usr/games".to_string(),
+        ] {
+            if !host.is_empty() { paths.push(format!("{}{}", host, p)); }
+            paths.push(p.clone());
         }
     }
 
-    // Set augmented PATH so child processes (e.g. mpv calling ffmpeg) also find binaries
-    let new_path = paths.join(":");
-    std::env::set_var("PATH", &new_path);
+    // Also include whatever PATH currently has
+    if let Ok(env_path) = std::env::var("PATH") {
+        #[cfg(target_os = "windows")]
+        let sep = ';';
+        #[cfg(not(target_os = "windows"))]
+        let sep = ':';
+        for p in env_path.split(sep) {
+            let s = p.to_string();
+            if !paths.contains(&s) { paths.push(s); }
+        }
+    }
 
-    // Resolve each binary eagerly
+    // Augment PATH for child processes
+    #[cfg(target_os = "windows")]
+    let sep = ";";
+    #[cfg(not(target_os = "windows"))]
+    let sep = ":";
+
+    let clean: Vec<&str> = paths.iter()
+        .filter(|p| !p.starts_with("/proc/1/root"))
+        .map(|s| s.as_str())
+        .collect();
+    std::env::set_var("PATH", clean.join(sep));
+
     let mpv     = resolve_bin("mpv",     &paths);
     let ytdlp   = resolve_bin("yt-dlp",  &paths);
     let ffprobe = resolve_bin("ffprobe", &paths);
@@ -81,13 +126,20 @@ fn init_bin_paths() {
     eprintln!("[vanguard] ffprobe -> {}", ffprobe);
     eprintln!("[vanguard] ffmpeg  -> {}", ffmpeg);
 
-    let _ = BIN_MPV.set(mpv);
-    let _ = BIN_YTDLP.set(ytdlp);
-    let _ = BIN_FFPROBE.set(ffprobe);
-    let _ = BIN_FFMPEG.set(ffmpeg);
+    // OnceLock::set silently fails if already set — that's fine for re-init.
+    // We work around this by using a helper that replaces the value.
+    fn set_or_update(lock: &std::sync::OnceLock<String>, val: String) {
+        if lock.get().is_none() {
+            let _ = lock.set(val);
+        }
+        // If already set (re-init after install), update PATH covers it
+    }
+    set_or_update(&BIN_MPV,     mpv);
+    set_or_update(&BIN_YTDLP,   ytdlp);
+    set_or_update(&BIN_FFPROBE, ffprobe);
+    set_or_update(&BIN_FFMPEG,  ffmpeg);
 }
 
-// Helpers to get resolved paths
 fn bin_mpv()     -> &'static str { BIN_MPV.get().map(|s| s.as_str()).unwrap_or("mpv") }
 fn bin_ytdlp()   -> &'static str { BIN_YTDLP.get().map(|s| s.as_str()).unwrap_or("yt-dlp") }
 fn bin_ffprobe() -> &'static str { BIN_FFPROBE.get().map(|s| s.as_str()).unwrap_or("ffprobe") }
@@ -1569,55 +1621,228 @@ async fn install_dependencies(_app_handle: tauri::AppHandle) -> Result<InstallRe
             let mut log = String::new();
             let mut success = false;
 
-            // shinchiro.mpv = official mpv Windows builds.
-            // mpv.net is a separate .NET wrapper app — does NOT provide the mpv binary.
-            let winget_ok = Command::new("winget")
-                .args(["install", "--id", "shinchiro.mpv", "-e",
+            // Determine a good install dir — use %LOCALAPPDATA%\Programs\vanguard-deps
+            let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| {
+                format!("{}\\AppData\\Local", std::env::var("USERPROFILE").unwrap_or("C:\\Users\\User".to_string()))
+            });
+            let deps_dir = format!("{}\\Programs\\vanguard-deps", local_app_data);
+            let mpv_dir  = format!("{}\\mpv",   deps_dir);
+            let ff_dir   = format!("{}\\ffmpeg", deps_dir);
+            let _ = std::fs::create_dir_all(&mpv_dir);
+            let _ = std::fs::create_dir_all(&ff_dir);
+
+            // ── Helper: add a directory to the user's PATH permanently ──────
+            fn add_to_user_path(dir: &str) {
+                // Read current user PATH from registry
+                let output = Command::new("reg")
+                    .args(["query", "HKCU\\Environment", "/v", "PATH"])
+                    .output();
+                let current = if let Ok(out) = output {
+                    String::from_utf8_lossy(&out.stdout).to_string()
+                } else { String::new() };
+                // Extract the actual value after "PATH    REG_SZ    " or "REG_EXPAND_SZ"
+                let current_val = current.lines()
+                    .find(|l| l.contains("PATH"))
+                    .and_then(|l| l.split("REG_SZ").nth(1).or_else(|| l.split("REG_EXPAND_SZ").nth(1)))
+                    .map(|s| s.trim().to_string())
+                    .unwrap_or_default();
+                if current_val.contains(dir) { return; }
+                let new_val = if current_val.is_empty() {
+                    dir.to_string()
+                } else {
+                    format!("{};{}", current_val, dir)
+                };
+                let _ = Command::new("reg")
+                    .args(["add", "HKCU\\Environment", "/v", "PATH", "/t", "REG_EXPAND_SZ", "/d", &new_val, "/f"])
+                    .output();
+                // Also update current process PATH immediately
+                let proc_path = std::env::var("PATH").unwrap_or_default();
+                std::env::set_var("PATH", format!("{};{}", proc_path, dir));
+            }
+
+            // ── 1. Try winget first (cleanest) ───────────────────────────────
+            let winget_mpv = Command::new("winget")
+                .args(["install", "--id", "mpv-player.mpv", "-e", "--silent",
                        "--accept-source-agreements", "--accept-package-agreements"])
                 .output().map(|o| o.status.success()).unwrap_or(false);
 
-            if winget_ok {
+            if !winget_mpv {
+                // Try alternate winget ID
                 let _ = Command::new("winget")
-                    .args(["install", "--id", "Gyan.FFmpeg", "-e",
+                    .args(["install", "--id", "shinchiro.mpv", "-e", "--silent",
                            "--accept-source-agreements", "--accept-package-agreements"])
                     .output();
-                success = true;
-                log.push_str("Installed via winget.\n");
-            } else {
-                let choco_ok = Command::new("choco")
-                    .args(["install", "mpv", "ffmpeg", "-y"])
-                    .output().map(|o| o.status.success()).unwrap_or(false);
-                if choco_ok {
-                    success = true;
-                    log.push_str("Installed via chocolatey.\n");
+            }
+
+            let _ = Command::new("winget")
+                .args(["install", "--id", "Gyan.FFmpeg", "-e", "--silent",
+                       "--accept-source-agreements", "--accept-package-agreements"])
+                .output();
+
+            // ── 2. Direct download fallback (works without any package manager) ─
+            // Check if mpv is already available after winget attempt
+            let mpv_found = Command::new(bin_mpv()).arg("--version").output()
+                .map(|o| o.status.success()).unwrap_or(false)
+                || std::path::Path::new(&format!("{}\\mpv.exe", mpv_dir)).exists();
+
+            if !mpv_found {
+                log.push_str("winget unavailable or failed — downloading mpv directly...\n");
+
+                // Download mpv portable zip from mpv.io recommended Windows build (sourceforge mirror)
+                // Using PowerShell's built-in Invoke-WebRequest — no curl/wget needed
+                let mpv_zip = format!("{}\\mpv.zip", deps_dir);
+                let dl_mpv = Command::new("powershell")
+                    .args([
+                        "-NoProfile", "-NonInteractive", "-Command",
+                        &format!(
+                            "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; \
+                             $ProgressPreference = 'SilentlyContinue'; \
+                             Invoke-WebRequest -Uri 'https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20240128/mpv-x86_64-20240128-git-a40958c.7z' \
+                             -OutFile '{}' -UseBasicParsing", mpv_zip
+                        )
+                    ])
+                    .output();
+
+                // Try simpler portable zip from mpv.io
+                let dl_mpv2 = if dl_mpv.map(|o| o.status.success()).unwrap_or(false) {
+                    true
                 } else {
-                    log.push_str("winget and chocolatey not found.\nPlease install manually:\n\
-                        - mpv: https://mpv.io/installation/\n\
-                        - yt-dlp: https://github.com/yt-dlp/yt-dlp\n\
-                        - ffmpeg: https://ffmpeg.org/download.html\n");
+                    Command::new("powershell")
+                        .args([
+                            "-NoProfile", "-NonInteractive", "-Command",
+                            &format!(
+                                "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; \
+                                 $ProgressPreference = 'SilentlyContinue'; \
+                                 Invoke-WebRequest -Uri 'https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip' \
+                                 -OutFile '{ff_dir}\\ffmpeg.zip' -UseBasicParsing",
+                                ff_dir = ff_dir
+                            )
+                        ])
+                        .output().map(|o| o.status.success()).unwrap_or(false)
+                };
+                let _ = dl_mpv2;
+
+                // Extract using PowerShell's built-in Expand-Archive
+                if std::path::Path::new(&mpv_zip).exists() {
+                    let _ = Command::new("powershell")
+                        .args(["-NoProfile", "-NonInteractive", "-Command",
+                               &format!("$ProgressPreference='SilentlyContinue'; \
+                                         Expand-Archive -Path '{}' -DestinationPath '{}' -Force",
+                                        mpv_zip, mpv_dir)])
+                        .output();
+                    // Move mpv.exe to root of mpv_dir if it ended up in a subfolder
+                    let _ = Command::new("powershell")
+                        .args(["-NoProfile", "-NonInteractive", "-Command",
+                               &format!("Get-ChildItem -Path '{}' -Recurse -Filter 'mpv.exe' | \
+                                         ForEach-Object {{ Copy-Item $_.FullName '{}\\mpv.exe' -Force }}",
+                                        mpv_dir, mpv_dir)])
+                        .output();
+                    add_to_user_path(&mpv_dir);
+                    std::env::set_var("PATH", format!("{};{}", std::env::var("PATH").unwrap_or_default(), &mpv_dir));
+                    log.push_str("mpv extracted to local deps folder.\n");
                 }
             }
 
-            // Try all yt-dlp install paths
-            let _ = Command::new("winget")
-                .args(["install", "--id", "yt-dlp.yt-dlp", "-e",
-                       "--accept-source-agreements", "--accept-package-agreements"])
-                .output();
-            for pip in &["pip", "pip3"] {
-                if Command::new(pip).args(["install", "--upgrade", "yt-dlp"])
-                    .output().map(|o| o.status.success()).unwrap_or(false) { break; }
-            }
-            let _ = Command::new("python").args(["-m", "pip", "install", "--upgrade", "yt-dlp"]).output();
+            // ── 3. ffmpeg direct download ────────────────────────────────────
+            let ff_found = Command::new(bin_ffprobe()).arg("-version").output()
+                .map(|o| o.status.success()).unwrap_or(false)
+                || std::path::Path::new(&format!("{}\\ffprobe.exe", ff_dir)).exists();
 
-            let mpv     = Command::new(bin_mpv()).arg("--version").output().map(|o| o.status.success()).unwrap_or(false);
-            let yt_dlp  = Command::new(bin_ytdlp()).arg("--version").output().map(|o| o.status.success()).unwrap_or(false);
-            let ffprobe = Command::new(bin_ffprobe()).arg("-version").output().map(|o| o.status.success()).unwrap_or(false);
+            if !ff_found {
+                let ff_zip = format!("{}\\ffmpeg.zip", ff_dir);
+                let _ = Command::new("powershell")
+                    .args(["-NoProfile", "-NonInteractive", "-Command",
+                           &format!(
+                               "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; \
+                                $ProgressPreference = 'SilentlyContinue'; \
+                                Invoke-WebRequest -Uri \
+                                'https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip' \
+                                -OutFile '{}' -UseBasicParsing", ff_zip
+                           )])
+                    .output();
+                if std::path::Path::new(&ff_zip).exists() {
+                    let _ = Command::new("powershell")
+                        .args(["-NoProfile", "-NonInteractive", "-Command",
+                               &format!("$ProgressPreference='SilentlyContinue'; \
+                                         Expand-Archive -Path '{}' -DestinationPath '{}' -Force",
+                                        ff_zip, ff_dir)])
+                        .output();
+                    // ffmpeg zips have a bin/ subfolder
+                    let _ = Command::new("powershell")
+                        .args(["-NoProfile", "-NonInteractive", "-Command",
+                               &format!("Get-ChildItem -Path '{}' -Recurse -Filter 'ffprobe.exe' | \
+                                         ForEach-Object {{ Copy-Item $_.FullName '{}\\ffprobe.exe' -Force }}; \
+                                         Get-ChildItem -Path '{}' -Recurse -Filter 'ffmpeg.exe' | \
+                                         ForEach-Object {{ Copy-Item $_.FullName '{}\\ffmpeg.exe' -Force }}",
+                                        ff_dir, ff_dir, ff_dir, ff_dir)])
+                        .output();
+                    add_to_user_path(&ff_dir);
+                    log.push_str("ffmpeg extracted to local deps folder.\n");
+                }
+            }
+
+            // ── 4. yt-dlp: always try pip, then direct download ──────────────
+            let ytdlp_installed =
+                Command::new("winget")
+                    .args(["install", "--id", "yt-dlp.yt-dlp", "-e", "--silent",
+                           "--accept-source-agreements", "--accept-package-agreements"])
+                    .output().map(|o| o.status.success()).unwrap_or(false)
+                || {
+                    let mut ok = false;
+                    for pip in &["pip", "pip3", "python -m pip"] {
+                        if Command::new(pip).args(["install", "--upgrade", "yt-dlp"])
+                            .output().map(|o| o.status.success()).unwrap_or(false) { ok = true; break; }
+                    }
+                    ok
+                };
+
+            if !ytdlp_installed {
+                // Direct download yt-dlp.exe from GitHub releases
+                let ytdlp_path = format!("{}\\yt-dlp.exe", deps_dir);
+                let _ = Command::new("powershell")
+                    .args(["-NoProfile", "-NonInteractive", "-Command",
+                           &format!(
+                               "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; \
+                                $ProgressPreference = 'SilentlyContinue'; \
+                                Invoke-WebRequest -Uri \
+                                'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe' \
+                                -OutFile '{}' -UseBasicParsing", ytdlp_path
+                           )])
+                    .output();
+                if std::path::Path::new(&ytdlp_path).exists() {
+                    add_to_user_path(&deps_dir);
+                    log.push_str("yt-dlp.exe downloaded directly from GitHub.\n");
+                }
+            }
+
+            // Re-run init_bin_paths so the new installs are found immediately
+            init_bin_paths();
+
+            let mpv_ok     = Command::new(bin_mpv()).arg("--version").output().map(|o| o.status.success()).unwrap_or(false)
+                          || std::path::Path::new(&format!("{}\\mpv.exe", mpv_dir)).exists();
+            let ytdlp_ok   = Command::new(bin_ytdlp()).arg("--version").output().map(|o| o.status.success()).unwrap_or(false)
+                          || std::path::Path::new(&format!("{}\\yt-dlp.exe", deps_dir)).exists();
+            let ffprobe_ok = Command::new(bin_ffprobe()).arg("-version").output().map(|o| o.status.success()).unwrap_or(false)
+                          || std::path::Path::new(&format!("{}\\ffprobe.exe", ff_dir)).exists();
+
+            success = mpv_ok && ytdlp_ok && ffprobe_ok;
+
+            if !success && log.is_empty() {
+                log.push_str("Some dependencies could not be installed automatically.\n\
+                    Please install manually:\n\
+                    - mpv: https://mpv.io/installation/\n\
+                    - yt-dlp: https://github.com/yt-dlp/yt-dlp/releases\n\
+                    - ffmpeg: https://ffmpeg.org/download.html\n\
+                    \nAfter installing, add them to your PATH and restart Vanguard.\n");
+            }
+
             let msg = format!(
-                "{}\nmpv: {}  yt-dlp: {}  ffprobe: {}",
+                "{}\nmpv: {}  yt-dlp: {}  ffprobe: {}\n\
+                 Note: A restart may be needed for PATH changes to take effect.",
                 log,
-                if mpv     { "✓" } else { "✗ (restart may be needed)" },
-                if yt_dlp  { "✓" } else { "✗ (restart may be needed)" },
-                if ffprobe { "✓" } else { "✗" },
+                if mpv_ok     { "✓" } else { "✗" },
+                if ytdlp_ok   { "✓" } else { "✗" },
+                if ffprobe_ok { "✓" } else { "✗" },
             );
             Ok(InstallResult { success, message: msg })
         }
@@ -1635,9 +1860,9 @@ async fn install_dependencies(_app_handle: tauri::AppHandle) -> Result<InstallRe
 fn ping() -> String { "pong".to_string() }
 
 fn main() {
-    // Resolve binary paths eagerly before anything else runs.
-    // This must be first — AppImages and desktop launchers often have a
-    // stripped PATH that doesn't include /usr/local/bin, ~/.local/bin, etc.
+    // Must be first — resolves mpv/yt-dlp/ffmpeg/ffprobe paths and augments
+    // PATH before Tauri or any command handler runs. Critical for AppImage
+    // and Windows desktop launcher contexts where PATH is stripped.
     init_bin_paths();
 
     tauri::Builder::default()
