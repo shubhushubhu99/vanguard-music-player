@@ -79,13 +79,25 @@ sudo apt install mpv yt-dlp ffmpeg libwebkit2gtk-4.1-dev \
   libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
 ```
 
-On Windows, the required binaries need to be placed in `src-tauri/binaries/` before building. See [`scripts/fetch-windows-deps.ps1`](scripts/fetch-windows-deps.ps1) for the automated download script.
+On Windows, the required binaries (`mpv`, `yt-dlp`, `ffmpeg`, `ffprobe`) must be placed in `src-tauri/binaries/` before building.
+
+Download **`binaries.zip`** from the [Releases](../../releases) page, extract it, and copy the contents into `src-tauri/binaries/`. The folder should look like this:
+
+```
+src-tauri/binaries/
+├── mpv-x86_64-pc-windows-msvc.exe
+├── yt-dlp-x86_64-pc-windows-msvc.exe
+├── ffmpeg-x86_64-pc-windows-msvc.exe
+└── ffprobe-x86_64-pc-windows-msvc.exe
+```
+
+Then proceed with the build step below.
 
 ### Build
 
 ```bash
 git clone https://github.com/ishmweet/vanguard-music-player.git
-cd vanguard-player
+cd vanguard-music-player
 npm install
 cargo tauri build
 ```
