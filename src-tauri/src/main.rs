@@ -6,6 +6,27 @@ use serde_json::Value;
 use tauri::Emitter;
 use tauri::Manager;
 
+// On Windows, every spawned process gets a visible CMD flash unless we set
+// CREATE_NO_WINDOW. This trait applies it automatically on Windows and is a
+// no-op on Linux/macOS, so all call sites stay identical.
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+trait NoWindow {
+    fn no_window(&mut self) -> &mut Self;
+}
+
+impl NoWindow for Command {
+    #[cfg(windows)]
+    fn no_window(&mut self) -> &mut Self {
+        self.creation_flags(0x08000000)
+    }
+    #[cfg(not(windows))]
+    fn no_window(&mut self) -> &mut Self {
+        self
+    }
+}
+
 #[cfg(unix)]
 use std::os::unix::net::UnixStream;
 
@@ -259,6 +280,7 @@ async fn search_youtube(query: String) -> Result<String, String> {
             ])
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
+            .no_window()
             .spawn()
             .map_err(|e| format!("yt-dlp not found: {}", e))?;
 
@@ -300,11 +322,11 @@ async fn open_url_in_browser(url: String) -> Result<(), String> {
     }
     tokio::task::spawn_blocking(move || {
         #[cfg(target_os = "linux")]
-        { Command::new("xdg-open").arg(&sanitized).spawn().map_err(|e| e.to_string())?; }
+        { Command::new("xdg-open").arg(&sanitized).no_window().spawn().map_err(|e| e.to_string())?; }
         #[cfg(target_os = "macos")]
-        { Command::new("open").arg(&sanitized).spawn().map_err(|e| e.to_string())?; }
+        { Command::new("open").arg(&sanitized).no_window().spawn().map_err(|e| e.to_string())?; }
         #[cfg(target_os = "windows")]
-        { Command::new("cmd").args(["/c", "start", "", &sanitized]).spawn().map_err(|e| e.to_string())?; }
+        { Command::new("cmd").args(["/c", "start", "", &sanitized]).no_window().spawn().map_err(|e| e.to_string())?; }
         Ok::<(), String>(())
     })
     .await
@@ -326,6 +348,7 @@ async fn import_youtube_playlist(url: String) -> Result<String, String> {
             ])
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
+            .no_window()
             .spawn()
             .map_err(|e| format!("yt-dlp not found: {}", e))?;
 
@@ -429,6 +452,7 @@ async fn prefetch_track(url: String) -> Result<(), String> {
                     "--socket-timeout", "8",
                     &url_clone,
                 ])
+                .no_window()
                 .output()
         })
         .await;
@@ -562,6 +586,7 @@ async fn play_audio(url: String) -> Result<(), String> {
         ]);
 
         Command::new(bin_mpv()).args(&args)
+            .no_window()
             .spawn()
             .map_err(|e| format!("mpv not found or failed to start: {}", e))?;
 
@@ -602,6 +627,7 @@ async fn play_local_file(path: String) -> Result<(), String> {
         ]);
 
         Command::new(bin_mpv()).args(&args)
+            .no_window()
             .spawn()
             .map_err(|e| format!("mpv not found or failed to start: {}", e))?;
 
@@ -893,6 +919,7 @@ async fn download_song(url: String, quality: String, format: Option<String>, emb
         args.push(url.clone());
         let output = Command::new(bin_ytdlp())
             .args(&args)
+            .no_window()
             .output()
             .map_err(|e| format!("yt-dlp not found: {}", e))?;
         if output.status.success() {
@@ -946,6 +973,7 @@ async fn batch_download(
                 .args(["-f", format, "--extract-audio", "--audio-format", "mp3",
                        "--audio-quality", audio_quality, "--embed-thumbnail", "--add-metadata",
                        "--no-check-certificates", "--no-warnings", "-o", &tpl, &url_clone])
+                .no_window()
                 .output()
                 .map_err(|e| format!("yt-dlp not found: {}", e))?;
             if out.status.success() {
@@ -1035,11 +1063,11 @@ async fn open_in_file_manager(path: String) -> Result<(), String> {
             p.parent().map(|d| d.to_string_lossy().to_string()).unwrap_or(path)
         } else { path };
         #[cfg(target_os = "macos")]
-        { Command::new("open").arg(&dir).spawn().map_err(|e| format!("open failed: {}", e))?; }
+        { Command::new("open").arg(&dir).no_window().spawn().map_err(|e| format!("open failed: {}", e))?; }
         #[cfg(target_os = "windows")]
-        { Command::new("explorer.exe").arg(&dir).spawn().map_err(|e| format!("explorer failed: {}", e))?; }
+        { Command::new("explorer.exe").arg(&dir).no_window().spawn().map_err(|e| format!("explorer failed: {}", e))?; }
         #[cfg(target_os = "linux")]
-        { Command::new("xdg-open").arg(&dir).spawn().map_err(|e| format!("xdg-open failed: {}", e))?; }
+        { Command::new("xdg-open").arg(&dir).no_window().spawn().map_err(|e| format!("xdg-open failed: {}", e))?; }
         Ok(())
     })
     .await
@@ -1054,6 +1082,7 @@ async fn get_audio_metadata(path: String) -> Result<AudioMetadata, String> {
     tokio::task::spawn_blocking(move || {
         let output = Command::new(bin_ffprobe())
             .args(["-v", "quiet", "-print_format", "json", "-show_format", &path])
+            .no_window()
             .output()
             .map_err(|_| "ffprobe not found — install ffmpeg".to_string())?;
         let json: Value = serde_json::from_str(
@@ -1081,6 +1110,7 @@ async fn get_waveform_thumbnail(path: String) -> Result<Vec<f32>, String> {
     tokio::task::spawn_blocking(move || {
         let output = Command::new(bin_ffmpeg())
             .args(["-i", &path, "-ac", "1", "-ar", "500", "-f", "f32le", "-"])
+            .no_window()
             .output()
             .map_err(|_| "ffmpeg not found".to_string())?;
         if output.stdout.is_empty() { return Err("No audio data".to_string()); }
@@ -1171,6 +1201,7 @@ async fn normalize_file(path: String, output_path: String) -> Result<(), String>
         let out = Command::new(bin_ffmpeg())
             .args(["-i", &resolved_in, "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
                    "-ar", "44100", "-y", &resolved_out])
+            .no_window()
             .output()
             .map_err(|_| "ffmpeg not found".to_string())?;
         if out.status.success() { Ok(()) }
@@ -1261,7 +1292,7 @@ fn kill_mpv() {
             term_args.push(u.as_str());
         }
         term_args.push("mpv");
-        let _ = Command::new("pkill").args(&term_args).output();
+        let _ = Command::new("pkill").args(&term_args).no_window().output();
 
         
         
@@ -1271,12 +1302,12 @@ fn kill_mpv() {
             kill_args.push(u.as_str());
         }
         kill_args.push("mpv");
-        let _ = Command::new("pkill").args(&kill_args).output();
+        let _ = Command::new("pkill").args(&kill_args).no_window().output();
     }
     #[cfg(windows)]
     {
         
-        let _ = Command::new("taskkill").args(["/F", "/T", "/IM", "mpv.exe"]).output();
+        let _ = Command::new("taskkill").args(["/F", "/T", "/IM", "mpv.exe"]).no_window().output();
     }
 }
 
