@@ -855,13 +855,16 @@ async fn set_equalizer(bass: f64, mid: f64, treble: f64) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn download_song(url: String, quality: String, path: String) -> Result<String, String> {
+async fn download_song(url: String, quality: String, format: Option<String>, embed_thumbnail: Option<bool>, path: String) -> Result<String, String> {
     tokio::task::spawn_blocking(move || {
         let resolved_path = expand_tilde(&path);
-        let format = match quality.as_str() {
-            "Low"    => "worstaudio/worst",
-            "Medium" => "bestaudio[abr<=160]/bestaudio/best",
-            _        => "bestaudio/best",
+        let fmt = format.as_deref().unwrap_or("mp3");
+        let do_embed = embed_thumbnail.unwrap_or(true);
+        let audio_format = match fmt {
+            "opus" => "opus",
+            "m4a"  => "m4a",
+            "flac" => "flac",
+            _      => "mp3",
         };
         let audio_quality = match quality.as_str() {
             "Low"    => "9",
@@ -874,10 +877,21 @@ async fn download_song(url: String, quality: String, path: String) -> Result<Str
         } else {
             format!("{}{}%(title)s.%(ext)s", resolved_path, sep)
         };
+        let mut args = vec![
+            "--extract-audio".to_string(),
+            "--audio-format".to_string(), audio_format.to_string(),
+            "--audio-quality".to_string(), audio_quality.to_string(),
+            "--add-metadata".to_string(),
+            "--no-check-certificates".to_string(),
+            "--no-warnings".to_string(),
+            "-o".to_string(), output_template.clone(),
+        ];
+        if do_embed {
+            args.push("--embed-thumbnail".to_string());
+        }
+        args.push(url.clone());
         let output = Command::new(bin_ytdlp())
-            .args(["-f", format, "--extract-audio", "--audio-format", "mp3",
-                   "--audio-quality", audio_quality, "--embed-thumbnail", "--add-metadata",
-                   "--no-check-certificates", "--no-warnings", "-o", &output_template, &url])
+            .args(&args)
             .output()
             .map_err(|e| format!("yt-dlp not found: {}", e))?;
         if output.status.success() {
@@ -1453,6 +1467,33 @@ fn parse_f64_from_response(response: &str) -> Result<f64, String> {
 fn ping() -> String { "pong".to_string() }
 
 #[tauri::command]
+async fn check_for_update() -> Result<Option<String>, String> {
+    let current = env!("CARGO_PKG_VERSION");
+    let client = reqwest::Client::builder()
+        .user_agent("vanguard-player")
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let resp = client
+        .get("https://api.github.com/repos/ishmweet/vanguard-player/releases/latest")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let json: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
+    let latest = json["tag_name"]
+        .as_str()
+        .unwrap_or("")
+        .trim_start_matches('v');
+
+    if latest.is_empty() || latest == current {
+        Ok(None)
+    } else {
+        Ok(Some(latest.to_string()))
+    }
+}
+
+#[tauri::command]
 async fn set_mpris_metadata(
     title: String,
     artist: String,
@@ -1681,6 +1722,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             ping,
+            check_for_update,
             set_mpris_metadata,
             update_mpris_playback,
             search_youtube,

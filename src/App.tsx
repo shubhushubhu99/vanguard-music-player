@@ -15,8 +15,10 @@ import {
   Zap, BarChart2, FileOutput,
   CheckCircle, Database, Upload, ArchiveRestore,
   ChevronDown,
-  Loader2, CheckCircle2, XCircle
+  Loader2, CheckCircle2, XCircle, ArrowUpCircle, Image, History
 } from 'lucide-react';
+
+const __APP_VERSION__ = '0.1.0';
 
 type Track = {
   id: number;
@@ -56,7 +58,7 @@ type CtxMenu = {
 type AudioInfo = { codec: string; bitrate: number; samplerate: number; channels: string; format: string; url: string };
 type DiskInfo = { used_bytes: number; track_count: number };
 type BatchProgress = { index: number; total: number; title: string; success: boolean; error?: string };
-type SettingsTab = 'downloads' | 'storage';
+type SettingsTab = 'updates' | 'downloads' | 'playback' | 'storage';
 
 function parseDurationToSeconds(d: string): number {
   const p = d.split(':').map(Number);
@@ -492,7 +494,7 @@ function CsvImportModal({
                 <div>
                   <p className="text-sm font-semibold text-white">{step.title}</p>
                   <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">{step.desc}</p>
-                  {step.link && <button onClick={() => import('@tauri-apps/plugin-opener').then(m => m.openUrl(step.link!)).catch(() => window.open(step.link!, '_blank'))}
+                  {step.link && <button onClick={() => openUrl(step.link!).catch(() => window.open(step.link!, '_blank'))}
                     className="text-base mt-2 inline-block font-bold hover:underline cursor-pointer" style={{ color: '#39FF14' }}>{step.linkLabel}</button>}
                 </div>
               </div>
@@ -699,21 +701,34 @@ function YtImportModal({
 
 function SettingsPanel({
   downloadQuality, setDownloadQuality, downloadPath, handleSelectDirectory,
+  downloadFormat, setDownloadFormat,
+  embedThumbnail, setEmbedThumbnail,
+  duplicateDetect, setDuplicateDetect,
+  continueWhereLO, setContinueWhereLO,
+  autoPauseUnplug, setAutoPauseUnplug,
   onBackup, onRestore,
   backupPath, setBackupPath,
   cachePath, setCachePath,
   loudnormEnabled, setLoudnormEnabled,
   showToast,
+  updateAvailable,
 }: {
   downloadQuality: string; setDownloadQuality: (q: string) => void;
   downloadPath: string; handleSelectDirectory: () => void;
+  downloadFormat: string; setDownloadFormat: (f: string) => void;
+  embedThumbnail: boolean; setEmbedThumbnail: (v: boolean) => void;
+  duplicateDetect: boolean; setDuplicateDetect: (v: boolean) => void;
+  continueWhereLO: boolean; setContinueWhereLO: (v: boolean) => void;
+  autoPauseUnplug: boolean; setAutoPauseUnplug: (v: boolean) => void;
   onBackup: () => void; onRestore: () => void;
   backupPath: string; setBackupPath: (p: string) => void;
   cachePath: string; setCachePath: (p: string) => void;
   loudnormEnabled: boolean; setLoudnormEnabled: (e: boolean) => void;
   showToast: (m: string) => void;
+  updateAvailable: string | null;
+  onNavigateToUpdates?: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('downloads');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('updates');
   const [diskInfo, setDiskInfo] = useState<DiskInfo | null>(null);
   const [cacheSize, setCacheSize] = useState<number>(0);
 
@@ -727,8 +742,10 @@ function SettingsPanel({
   const fmtBytes = (b: number) => b < 1024 * 1024 ? `${(b/1024).toFixed(1)} KB` : b < 1024**3 ? `${(b/1024**2).toFixed(1)} MB` : `${(b/1024**3).toFixed(2)} GB`;
 
   const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'updates',   label: 'Updates',   icon: <ArrowUpCircle size={15} /> },
     { id: 'downloads', label: 'Downloads', icon: <FolderDown size={15} /> },
-    { id: 'storage', label: 'Storage', icon: <Database size={15} /> },
+    { id: 'playback',  label: 'Playback',  icon: <Zap size={15} /> },
+    { id: 'storage',   label: 'Storage',   icon: <Database size={15} /> },
   ];
 
   return (
@@ -743,7 +760,10 @@ function SettingsPanel({
                 ? 'bg-[#39FF14]/[0.08] text-[#39FF14] border border-[#39FF14]/15 shadow-[inset_2px_0_0_#39FF14]'
                 : 'text-neutral-500 hover:text-neutral-200 hover:bg-white/[0.03] border border-transparent'}`}>
             <span className={activeTab === tab.id ? 'text-[#39FF14]' : 'text-neutral-600'}>{tab.icon}</span>
-            {tab.label}
+            <span className="flex-1">{tab.label}</span>
+            {tab.id === 'updates' && updateAvailable && (
+              <span className="w-2 h-2 rounded-full bg-[#39FF14] shadow-[0_0_6px_#39FF14] shrink-0" />
+            )}
           </button>
         ))}
       </div>
@@ -752,6 +772,42 @@ function SettingsPanel({
       <div className="flex-1 overflow-y-auto px-8 py-8 custom-scrollbar">
 
         {}
+        {activeTab === 'updates' && (
+          <div className="space-y-5">
+            <div>
+              <h2 className="text-xl font-bold text-white mb-1">Updates</h2>
+              <p className="text-sm text-neutral-500">Check for new releases of Vanguard Player.</p>
+            </div>
+
+            <div className={`rounded-xl border p-5 flex items-start gap-4 ${updateAvailable ? 'bg-[#39FF14]/[0.04] border-[#39FF14]/20' : 'bg-neutral-900/40 border-neutral-800/40'}`}>
+              <div className={`mt-0.5 shrink-0 ${updateAvailable ? 'text-[#39FF14]' : 'text-neutral-600'}`}>
+                {updateAvailable ? <ArrowUpCircle size={22} /> : <CheckCircle size={22} />}
+              </div>
+              <div className="flex-1 min-w-0">
+                {updateAvailable ? (
+                  <>
+                    <p className="text-sm font-semibold text-white mb-0.5">Update available — v{updateAvailable}</p>
+                    <p className="text-xs text-neutral-500 mb-3">A new version of Vanguard Player is ready to download.</p>
+                    <a
+                      href="#"
+                      onClick={e => { e.preventDefault(); openUrl('https://github.com/ishmweet/vanguard-player/releases/latest'); }}
+                      className="inline-flex items-center gap-2 text-xs font-semibold text-[#39FF14] hover:underline"
+                    >
+                      <ExternalLink size={13} />
+                      View release on GitHub
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-semibold text-white mb-0.5">You're up to date</p>
+                    <p className="text-xs text-neutral-500">Vanguard Player v{__APP_VERSION__} is the latest release.</p>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'downloads' && (
           <div className="space-y-5">
             <div>
@@ -801,6 +857,66 @@ function SettingsPanel({
             </div>
 
             {}
+            <div className="border border-neutral-800/60 rounded-xl overflow-visible">
+              <div className="px-5 py-4 border-b border-neutral-800/40 bg-neutral-900/20">
+                <h3 className="text-sm font-semibold text-white">Audio Format</h3>
+                <p className="text-xs text-neutral-600 mt-0.5">Container format for downloaded files.</p>
+              </div>
+              <div className="px-5 py-5 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-white">Format</p>
+                  <p className="text-xs text-neutral-600 mt-1">
+                    {downloadFormat === 'opus' ? 'Best compression, native YouTube codec' : downloadFormat === 'm4a' ? 'AAC in M4A, great Apple/car stereo compat' : downloadFormat === 'flac' ? 'Lossless — largest files' : 'MP3 — widest compatibility'}
+                  </p>
+                </div>
+                <ThemedSelect
+                  value={downloadFormat}
+                  onChange={setDownloadFormat}
+                  options={[
+                    { value: 'mp3',  label: 'MP3',  desc: 'Most compatible' },
+                    { value: 'opus', label: 'Opus', desc: 'Best compression' },
+                    { value: 'm4a',  label: 'M4A',  desc: 'AAC / Apple' },
+                    { value: 'flac', label: 'FLAC', desc: 'Lossless' },
+                  ]}
+                />
+              </div>
+            </div>
+
+            {}
+            <div className="border border-neutral-800/60 rounded-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-neutral-800/40 bg-neutral-900/20">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2"><Image size={14} className="text-[#39FF14]" /> File Options</h3>
+              </div>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800/30">
+                <div>
+                  <p className="text-sm font-medium text-white">Embed Thumbnail</p>
+                  <p className="text-xs text-neutral-600 mt-1">{embedThumbnail ? 'Cover art written into file tags' : 'No cover art in downloaded files'}</p>
+                </div>
+                <button onClick={() => setEmbedThumbnail(!embedThumbnail)}
+                  className={`relative w-11 h-6 rounded-full transition-all duration-200 shrink-0 ${embedThumbnail ? 'bg-[#39FF14]/80 shadow-[0_0_10px_rgba(57,255,20,0.3)]' : 'bg-neutral-700'}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${embedThumbnail ? 'left-5' : 'left-0.5'}`} />
+                </button>
+              </div>
+              <div className="flex items-center justify-between px-5 py-4">
+                <div>
+                  <p className="text-sm font-medium text-white">Duplicate Detection</p>
+                  <p className="text-xs text-neutral-600 mt-1">{duplicateDetect ? 'Skips tracks already in your download folder' : 'Always download regardless of duplicates'}</p>
+                </div>
+                <button onClick={() => setDuplicateDetect(!duplicateDetect)}
+                  className={`relative w-11 h-6 rounded-full transition-all duration-200 shrink-0 ${duplicateDetect ? 'bg-[#39FF14]/80 shadow-[0_0_10px_rgba(57,255,20,0.3)]' : 'bg-neutral-700'}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${duplicateDetect ? 'left-5' : 'left-0.5'}`} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'playback' && (
+          <div className="space-y-5">
+            <div>
+              <h2 className="text-xl font-bold text-white mb-1">Playback</h2>
+              <p className="text-sm text-neutral-500">Audio engine and playback behaviour settings.</p>
+            </div>
             <div className="border border-neutral-800/60 rounded-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-neutral-800/40 bg-neutral-900/20">
                 <h3 className="text-sm font-semibold text-white flex items-center gap-2"><Zap size={14} className="text-[#39FF14]" /> Audio Normalization</h3>
@@ -815,6 +931,32 @@ function SettingsPanel({
                   onClick={() => setLoudnormEnabled(!loudnormEnabled)}
                   className={`relative w-11 h-6 rounded-full transition-all duration-200 shrink-0 ${loudnormEnabled ? 'bg-[#39FF14]/80 shadow-[0_0_10px_rgba(57,255,20,0.3)]' : 'bg-neutral-700'}`}>
                   <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${loudnormEnabled ? 'left-5' : 'left-0.5'}`} />
+                </button>
+              </div>
+            </div>
+
+            <div className="border border-neutral-800/60 rounded-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-neutral-800/40 bg-neutral-900/20">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2"><History size={14} className="text-[#39FF14]" /> Session Behaviour</h3>
+              </div>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800/30">
+                <div>
+                  <p className="text-sm font-medium text-white">Continue Where Left Off</p>
+                  <p className="text-xs text-neutral-600 mt-1">{continueWhereLO ? 'Resumes each track from where you stopped' : 'Always starts tracks from the beginning'}</p>
+                </div>
+                <button onClick={() => setContinueWhereLO(!continueWhereLO)}
+                  className={`relative w-11 h-6 rounded-full transition-all duration-200 shrink-0 ${continueWhereLO ? 'bg-[#39FF14]/80 shadow-[0_0_10px_rgba(57,255,20,0.3)]' : 'bg-neutral-700'}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${continueWhereLO ? 'left-5' : 'left-0.5'}`} />
+                </button>
+              </div>
+              <div className="flex items-center justify-between px-5 py-4">
+                <div>
+                  <p className="text-sm font-medium text-white">Auto-pause on Headphone Unplug</p>
+                  <p className="text-xs text-neutral-600 mt-1">{autoPauseUnplug ? 'Pauses when audio output device disconnects' : 'Continues playing on device disconnect'}</p>
+                </div>
+                <button onClick={() => setAutoPauseUnplug(!autoPauseUnplug)}
+                  className={`relative w-11 h-6 rounded-full transition-all duration-200 shrink-0 ${autoPauseUnplug ? 'bg-[#39FF14]/80 shadow-[0_0_10px_rgba(57,255,20,0.3)]' : 'bg-neutral-700'}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${autoPauseUnplug ? 'left-5' : 'left-0.5'}`} />
                 </button>
               </div>
             </div>
@@ -947,28 +1089,45 @@ function DownloadsPanel({
 }) {
   const [tracks, setTracks] = useState<LocalTrack[]>([]);
   const [scanning, setScanning] = useState(false);
+  const [enriching, setEnriching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [diskInfo, setDiskInfo] = useState<DiskInfo | null>(null);
   const [renaming, setRenaming] = useState<LocalTrack | null>(null);
   const [renameVal, setRenameVal] = useState('');
+  const [searchQ, setSearchQ] = useState('');
+  const dragLocalIdx = useRef<number | null>(null);
+  const dragOverLocalIdxRef = useRef<number | null>(null);
+  const [dragOverLocalIdx, setDragOverLocalIdx] = useState<number | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const filtered = searchQ.trim()
+    ? tracks.filter(t => {
+        const q = searchQ.toLowerCase();
+        return t.title.toLowerCase().includes(q) || (t.artist || '').toLowerCase().includes(q);
+      })
+    : tracks;
 
   const scan = useCallback(async () => {
     setScanning(true); setError(null);
     try {
       const raw: LocalTrack[] = await invoke('scan_downloads', { path: downloadPath });
-      
-      const enriched = await Promise.allSettled(raw.map(async t => {
-        try {
-          const m: { title: string; artist: string; duration: string } = await invoke('get_audio_metadata', { path: t.path });
-          return { ...t, title: m.title || t.title, artist: m.artist || undefined, duration: m.duration !== '0:00' ? m.duration : undefined };
-        } catch { return t; }
-      }));
-      setTracks(enriched.map(r => r.status === 'fulfilled' ? r.value : (r as PromiseRejectedResult).reason));
+      setTracks(raw);
+      setScanning(false);
+
       const di = await invoke<DiskInfo>('get_disk_usage', { path: downloadPath }).catch(() => null);
       if (di) setDiskInfo(di);
-    } catch (e) { setError(String(e)); }
-    finally { setScanning(false); }
+
+      setEnriching(true);
+      for (const t of raw) {
+        try {
+          const m: { title: string; artist: string; duration: string } = await invoke('get_audio_metadata', { path: t.path });
+          const enriched = { ...t, title: m.title || t.title, artist: m.artist || undefined, duration: m.duration !== '0:00' ? m.duration : undefined };
+          setTracks(prev => prev.map(p => p.path === t.path ? enriched : p));
+        } catch { /* keep original */ }
+      }
+      setEnriching(false);
+    } catch (e) { setError(String(e)); setScanning(false); setEnriching(false); }
   }, [downloadPath]);
 
   useEffect(() => { scan(); }, [scan]);
@@ -981,6 +1140,7 @@ function DownloadsPanel({
       setRenaming(null);
     } catch (e) { setError(String(e)); }
   };
+
 
   return (
     <div className="flex-1 overflow-y-auto p-8 z-10 custom-scrollbar">
@@ -1007,6 +1167,28 @@ function DownloadsPanel({
           <button onClick={scan} disabled={scanning} className="p-2 text-neutral-500 hover:text-[#39FF14] disabled:opacity-40 rounded-lg hover:bg-white/5" title="Refresh"><RefreshCw size={16} className={scanning ? 'animate-spin' : ''} /></button>
         </div>
       </div>
+
+      {}
+      {!scanning && tracks.length > 0 && (
+        <div className="relative mb-4">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+            <Search size={15} className={searchQ ? 'text-[#39FF14]' : 'text-neutral-600'} />
+          </div>
+          <input
+            ref={searchRef}
+            type="text"
+            placeholder="Filter tracks..."
+            value={searchQ}
+            onChange={e => setSearchQ(e.target.value)}
+            className="w-full bg-neutral-900/60 border border-neutral-800 text-white rounded-xl py-2.5 pl-9 pr-9 focus:outline-none focus:border-[#39FF14]/50 focus:ring-1 focus:ring-[#39FF14]/20 transition-all text-sm placeholder-neutral-600"
+          />
+          {searchQ && (
+            <button onClick={() => setSearchQ('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-white transition-colors">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm mb-6">
@@ -1043,19 +1225,69 @@ function DownloadsPanel({
         <>
           <div className="flex items-center gap-3 mb-3">
             <span className="w-1.5 h-5 bg-[#39FF14] rounded-full shadow-[0_0_8px_#39FF14] shrink-0" />
-            <h3 className="text-base font-bold text-white flex-1">{tracks.length} track{tracks.length !== 1 ? 's' : ''}</h3>
+            <h3 className="text-base font-bold text-white flex-1">
+              {searchQ.trim() ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''}` : `${tracks.length} track${tracks.length !== 1 ? 's' : ''}`}
+            </h3>
+            {enriching && <span className="text-[11px] text-neutral-600 flex items-center gap-1.5"><div className="w-2.5 h-2.5 border border-neutral-600 border-t-transparent rounded-full animate-spin" />reading metadata</span>}
+            {!searchQ && !enriching && <p className="text-xs text-neutral-700">Drag to reorder</p>}
           </div>
+
+          {filtered.length === 0 && searchQ && (
+            <div className="flex flex-col items-center justify-center h-32 text-neutral-700 gap-2">
+              <Search size={28} strokeWidth={1} />
+              <p className="text-sm text-neutral-600">No tracks match "{searchQ}"</p>
+            </div>
+          )}
+
           <div className="flex flex-col gap-1">
-            {tracks.map((track, i) => {
+            {filtered.map((track, i) => {
               const isActive = currentTrackPath === track.path;
               const isHov = hovered === track.path;
+              const isDragOver = dragOverLocalIdx === i && dragLocalIdx.current !== null && dragLocalIdx.current !== i;
               return (
                 <div key={track.path}
-                  className={`flex items-center gap-4 px-4 py-3.5 rounded-lg cursor-pointer transition-all duration-150 group border
-                    ${isActive ? 'bg-[#39FF14]/[0.07] border-[#39FF14]/20' : 'hover:bg-white/5 border-transparent'}`}
-                  onClick={() => onPlayLocalTrack(track, tracks, i)}
-                  onMouseEnter={() => setHovered(track.path)} onMouseLeave={() => setHovered(null)}
+                  className={`relative flex items-center gap-4 px-4 py-3.5 rounded-lg cursor-pointer transition-all duration-150 group border
+                    ${isDragOver ? 'border-[#39FF14]/40 bg-[#39FF14]/[0.04]' : ''}
+                    ${isActive && !isDragOver ? 'bg-[#39FF14]/[0.07] border-[#39FF14]/20' : !isDragOver ? 'hover:bg-white/5 border-transparent' : ''}`}
+                  onMouseEnter={() => {
+                    setHovered(track.path);
+                    if (dragLocalIdx.current !== null) { dragOverLocalIdxRef.current = i; setDragOverLocalIdx(i); }
+                  }}
+                  onMouseLeave={() => setHovered(null)}
+                  onClick={() => onPlayLocalTrack(track, searchQ ? filtered : tracks, i)}
                 >
+                  {isDragOver && <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#39FF14] rounded-full z-10 shadow-[0_0_6px_#39FF14] pointer-events-none" />}
+                  {!searchQ && (
+                    <div className="w-4 flex items-center justify-center shrink-0 cursor-grab opacity-0 group-hover:opacity-40 hover:!opacity-70 transition-opacity"
+                      onMouseDown={e => {
+                        e.preventDefault();
+                        dragLocalIdx.current = i;
+                        dragOverLocalIdxRef.current = i;
+                        setDragOverLocalIdx(i);
+                        const onUp = () => {
+                          const from = dragLocalIdx.current;
+                          const to = dragOverLocalIdxRef.current;
+                          dragLocalIdx.current = null;
+                          dragOverLocalIdxRef.current = null;
+                          setDragOverLocalIdx(null);
+                          window.removeEventListener('mouseup', onUp);
+                          if (from === null || to === null || from === to) return;
+                          setTracks(prev => {
+                            const next = [...prev];
+                            const [moved] = next.splice(from, 1);
+                            next.splice(to, 0, moved);
+                            return next;
+                          });
+                        };
+                        window.addEventListener('mouseup', onUp);
+                      }}>
+                      <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" className="text-neutral-400">
+                        <circle cx="3" cy="3" r="1.5"/><circle cx="7" cy="3" r="1.5"/>
+                        <circle cx="3" cy="8" r="1.5"/><circle cx="7" cy="8" r="1.5"/>
+                        <circle cx="3" cy="13" r="1.5"/><circle cx="7" cy="13" r="1.5"/>
+                      </svg>
+                    </div>
+                  )}
                   <div className="w-8 flex items-center justify-center shrink-0">
                     {isActive && isLoadingTrack
                       ? <div className="w-3.5 h-3.5 border-2 border-[#39FF14] border-t-transparent rounded-full animate-spin" />
@@ -1163,6 +1395,7 @@ export default function VanguardPlayer() {
 
   const [isLoadingTrack, setIsLoadingTrack] = useState(false);
   const [activeNav, setActiveNav] = useState('home');
+  const [updateAvailable, setUpdateAvailable] = useState<string | null>(null);
   const [, setNavHistory] = useState<string[]>([]);
 
   
@@ -1256,6 +1489,12 @@ export default function VanguardPlayer() {
 
   
   const [downloadQuality, setDownloadQuality] = useState<string>(() => loadLS('vg_dlQuality', 'High'));
+  const [downloadFormat, setDownloadFormatState] = useState<string>(() => loadLS('vg_dlFormat', 'mp3'));
+  const [embedThumbnail, setEmbedThumbnailState] = useState<boolean>(() => loadLS('vg_embedThumb', true));
+  const [duplicateDetect, setDuplicateDetectState] = useState<boolean>(() => loadLS('vg_dupDetect', true));
+  const [continueWhereLO, setContinueWhereLOState] = useState<boolean>(() => loadLS('vg_continueWhere', false));
+  const [autoPauseUnplug, setAutoPauseUnplugState] = useState<boolean>(() => loadLS('vg_autoPause', false));
+  const trackPositionsRef = useRef<Record<string, number>>(loadLS('vg_trackPositions', {}));
   const [downloadPath, setDownloadPath] = useState<string>(() => loadLS('vg_dlPath', '~/Downloads'));
   const [backupPath, setBackupPathState] = useState<string>(() => loadLS('vg_backupPath', ''));
   const setBackupPath = useCallback((p: string) => { setBackupPathState(p); saveLS('vg_backupPath', p); }, []);
@@ -1345,6 +1584,11 @@ export default function VanguardPlayer() {
   }, []);
   useEffect(() => { saveLS('vg_searchHistory', searchHistory); }, [searchHistory]);
   useEffect(() => { saveLS('vg_dlQuality', downloadQuality); }, [downloadQuality]);
+  useEffect(() => { saveLS('vg_dlFormat', downloadFormat); }, [downloadFormat]);
+  useEffect(() => { saveLS('vg_embedThumb', embedThumbnail); }, [embedThumbnail]);
+  useEffect(() => { saveLS('vg_dupDetect', duplicateDetect); }, [duplicateDetect]);
+  useEffect(() => { saveLS('vg_continueWhere', continueWhereLO); }, [continueWhereLO]);
+  useEffect(() => { saveLS('vg_autoPause', autoPauseUnplug); }, [autoPauseUnplug]);
   useEffect(() => { saveLS('vg_dlPath', downloadPath); }, [downloadPath]);
   useEffect(() => { saveLS('vg_quickPicks', quickPicks); }, [quickPicks]);
   useEffect(() => { saveLS('vg_speed', playbackSpeed); }, [playbackSpeed]);
@@ -1406,7 +1650,10 @@ export default function VanguardPlayer() {
     return () => unlisteners.forEach(fn => fn());
   }, []);
 
-  
+  useEffect(() => {
+    invoke<string | null>('check_for_update').then(v => setUpdateAvailable(v ?? null)).catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!isPlaying || !currentTrack || isLoadingTrack) return;
     const url = currentTrack.url;
@@ -1573,6 +1820,11 @@ export default function VanguardPlayer() {
       const bm = bookmarksRef.current[track.url];
       if (bm && bm > 2) {
         setTimeout(() => invoke('seek_audio', { position: bm }).catch(() => {}), 600);
+      } else if (continueWhereLORef.current) {
+        const savedPos = trackPositionsRef.current[track.url];
+        if (savedPos && savedPos > 3) {
+          setTimeout(() => invoke('seek_audio', { time: savedPos }).catch(() => {}), 600);
+        }
       }
     } catch { setIsPlayingSync(false); }
     finally { setIsLoadingTrack(false); }
@@ -1632,7 +1884,14 @@ export default function VanguardPlayer() {
           const s: { position: number; duration: number } = await invoke('get_playback_state');
           if (s.duration > 0) { setTrackDurationSeconds(s.duration); trackDurationRef.current = s.duration; }
         } catch {}
-      }, 200);
+        if (continueWhereLORef.current) {
+          const key = `local://${local.path}`;
+          const savedPos = trackPositionsRef.current[key];
+          if (savedPos && savedPos > 3) {
+            invoke('seek_audio', { time: savedPos }).catch(() => {});
+          }
+        }
+      }, 300);
     } catch { setIsPlayingSync(false); }
   }, [volume, playbackSpeed, setIsPlayingSync]);
 
@@ -1825,6 +2084,36 @@ export default function VanguardPlayer() {
     return () => window.removeEventListener('keydown', h);
   }, [togglePlayPause, toggleMute]);
 
+  const autoPauseUnplugRef = useRef(autoPauseUnplug);
+  useEffect(() => { autoPauseUnplugRef.current = autoPauseUnplug; }, [autoPauseUnplug]);
+
+  const continueWhereLORef = useRef(continueWhereLO);
+  useEffect(() => { continueWhereLORef.current = continueWhereLO; }, [continueWhereLO]);
+
+  useEffect(() => {
+    if (!navigator.mediaDevices) return;
+    let prevOutputs: string[] = [];
+    const getOutputIds = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        return devices.filter(d => d.kind === 'audiooutput').map(d => d.deviceId);
+      } catch { return []; }
+    };
+    getOutputIds().then(ids => { prevOutputs = ids; });
+    const h = async () => {
+      if (!autoPauseUnplugRef.current) return;
+      const current = await getOutputIds();
+      const removed = prevOutputs.filter(id => !current.includes(id));
+      if (removed.length > 0 && isPlayingRef.current) {
+        togglePlayPause();
+        showToast('Paused — audio device disconnected');
+      }
+      prevOutputs = current;
+    };
+    navigator.mediaDevices.addEventListener('devicechange', h);
+    return () => navigator.mediaDevices.removeEventListener('devicechange', h);
+  }, [togglePlayPause, showToast]);
+
   
   const handleTrackEnd = useCallback(() => {
     if (endDetectedRef.current) return;
@@ -1930,6 +2219,11 @@ export default function VanguardPlayer() {
         
         if (Math.floor(s.position) % 5 === 0 && s.position > 3) {
           saveLS('vg_lastPosition', s.position);
+          if (continueWhereLORef.current && currentTrackRef.current) {
+            const key = currentTrackRef.current.url; // local:// or youtube URL
+            trackPositionsRef.current[key] = s.position;
+            saveLS('vg_trackPositions', trackPositionsRef.current);
+          }
         }
         
         const ab = abLoopRef.current;
@@ -2057,13 +2351,23 @@ export default function VanguardPlayer() {
 
   
   const handleDownload = useCallback(async (track: Track) => {
+    if (duplicateDetect) {
+      try {
+        const scanned: LocalTrack[] = await invoke('scan_downloads', { path: downloadPath });
+        const existing = scanned.map(t => t.title.toLowerCase());
+        if (existing.includes(track.title.toLowerCase())) {
+          showToast(`Already downloaded: ${track.title}`);
+          return;
+        }
+      } catch { /* proceed if check fails */ }
+    }
     setDownloadingTracks(p => ({ ...p, [track.url]: true }));
     try {
-      await invoke('download_song', { url: track.url, quality: downloadQuality, path: downloadPath });
+      await invoke('download_song', { url: track.url, quality: downloadQuality, format: downloadFormat, embedThumbnail, path: downloadPath });
       showToast(`Downloaded: ${track.title}`);
     } catch { showToast('Download failed'); }
     finally { setTimeout(() => setDownloadingTracks(p => ({ ...p, [track.url]: false })), 2000); }
-  }, [downloadQuality, downloadPath, showToast]);
+  }, [downloadQuality, downloadFormat, embedThumbnail, duplicateDetect, downloadPath, showToast]);
 
   const copyToClipboard = useCallback(async (text: string) => {
     try {
@@ -2367,6 +2671,16 @@ export default function VanguardPlayer() {
                     {isSearching ? <div className="w-4 h-4 border-2 border-[#39FF14]/70 border-t-transparent rounded-full animate-spin" /> : <Search size={16} />}
                     {!isSearching && 'Search'}
                   </button>
+                  {updateAvailable && (
+                    <button
+                      onClick={() => { setActiveNav('settings'); }}
+                      title={`Update available — v${updateAvailable}`}
+                      className="shrink-0 w-11 h-11 flex items-center justify-center rounded-xl border border-[#39FF14]/30 bg-[#39FF14]/[0.06] text-[#39FF14] hover:bg-[#39FF14]/15 transition-all duration-200 relative"
+                    >
+                      <Info size={17} />
+                      <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#39FF14] shadow-[0_0_5px_#39FF14]" />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -2706,11 +3020,17 @@ export default function VanguardPlayer() {
             <SettingsPanel
               downloadQuality={downloadQuality} setDownloadQuality={setDownloadQuality}
               downloadPath={downloadPath} handleSelectDirectory={handleSelectDirectory}
+              downloadFormat={downloadFormat} setDownloadFormat={setDownloadFormatState}
+              embedThumbnail={embedThumbnail} setEmbedThumbnail={setEmbedThumbnailState}
+              duplicateDetect={duplicateDetect} setDuplicateDetect={setDuplicateDetectState}
+              continueWhereLO={continueWhereLO} setContinueWhereLO={setContinueWhereLOState}
+              autoPauseUnplug={autoPauseUnplug} setAutoPauseUnplug={setAutoPauseUnplugState}
               onBackup={handleBackup} onRestore={handleRestore}
               backupPath={backupPath} setBackupPath={setBackupPath}
               cachePath={cachePath} setCachePath={setCachePath}
               loudnormEnabled={loudnormEnabled} setLoudnormEnabled={setLoudnormEnabledState}
               showToast={showToast}
+              updateAvailable={updateAvailable}
             />
           )}
         </div>
