@@ -1547,7 +1547,88 @@ async fn install_dependencies(_app_handle: tauri::AppHandle) -> Result<InstallRe
             Ok(InstallResult { success, message: msg })
         }
 
-        #[cfg(not(any(target_os = "linux", target_os = "windows")))]
+        #[cfg(target_os = "macos")]
+        {
+            let mut log = String::new();
+            let mut success = false;
+
+            // Check if Homebrew is installed
+            let brew_exists = Command::new("which")
+                .arg("brew")
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false);
+
+            if !brew_exists {
+                log.push_str("Homebrew not found. Install from https://brew.sh\n");
+                return Ok(InstallResult {
+                    success: false,
+                    message: log,
+                });
+            }
+
+            log.push_str("Using Homebrew to install dependencies...\n");
+
+            // Install mpv
+            let mpv_result = Command::new("brew")
+                .args(["install", "mpv"])
+                .output();
+            match mpv_result {
+                Ok(out) => {
+                    log.push_str(&String::from_utf8_lossy(&out.stdout));
+                    if out.status.success() {
+                        log.push_str("✓ mpv installed\n");
+                        success = true;
+                    } else {
+                        log.push_str("✗ mpv installation failed\n");
+                    }
+                }
+                Err(e) => log.push_str(&format!("Error installing mpv: {}\n", e)),
+            }
+
+            // Install ffmpeg
+            let ffmpeg_result = Command::new("brew")
+                .args(["install", "ffmpeg"])
+                .output();
+            match ffmpeg_result {
+                Ok(out) => {
+                    log.push_str(&String::from_utf8_lossy(&out.stdout));
+                    if out.status.success() {
+                        log.push_str("✓ ffmpeg installed\n");
+                    } else {
+                        log.push_str("✗ ffmpeg installation failed\n");
+                    }
+                }
+                Err(e) => log.push_str(&format!("Error installing ffmpeg: {}\n", e)),
+            }
+
+            // Install yt-dlp via pip
+            log.push_str("Installing yt-dlp via pip...\n");
+            for pip in &["pip3", "pip"] {
+                if let Ok(out) = Command::new(pip).args(["install", "--upgrade", "--user", "yt-dlp"]).output() {
+                    log.push_str(&String::from_utf8_lossy(&out.stdout));
+                    if out.status.success() {
+                        log.push_str("✓ yt-dlp installed\n");
+                        break;
+                    }
+                }
+            }
+
+            let mpv     = Command::new("mpv").arg("--version").output().map(|o| o.status.success()).unwrap_or(false);
+            let yt_dlp  = Command::new("yt-dlp").arg("--version").output().map(|o| o.status.success()).unwrap_or(false);
+            let ffprobe = Command::new("ffprobe").arg("-version").output().map(|o| o.status.success()).unwrap_or(false);
+
+            log.push_str(&format!("\n─── Installation Status ───\n"));
+            log.push_str(&format!("mpv: {}  yt-dlp: {}  ffprobe: {}\n",
+                if mpv     { "✓" } else { "✗" },
+                if yt_dlp  { "✓" } else { "✗" },
+                if ffprobe { "✓" } else { "✗" }
+            ));
+
+            Ok(InstallResult { success: success || mpv || yt_dlp, message: log })
+        }
+
+        #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
         { Ok(InstallResult { success: false, message: "Unsupported platform".to_string() }) }
     })
     .await

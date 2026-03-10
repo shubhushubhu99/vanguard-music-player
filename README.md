@@ -2,11 +2,11 @@
 
 # 🎵 Vanguard Player
 
-**A free, open-source, ad-free music player for Windows and Linux.**  
+**A free, open-source, ad-free music player for macOS, Windows, and Linux.**  
 High-fidelity audio playback · YouTube streaming · Library management · Zero tracking · Zero paywalls.
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-blue)
+![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue)
 ![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri-orange)
 ![GitHub](https://img.shields.io/badge/GitHub-ishmweet-black?logo=github)
 
@@ -30,12 +30,6 @@ Vanguard Player is a desktop music application built with Tauri (Rust backend) a
 - ⏱️ **Sleep Timer** — Auto-stop playback after a set duration
 - 🔁 **Playback Modes** — Shuffle, repeat all, repeat one
 - 🏷️ **Bulk Tag Editor** — Edit track titles and artists in bulk within playlists
-- 📊 **Audio Info** — View codec, bitrate, sample rate, and channel details
-- 💾 **Stream Cache** — Configurable disk caching for streams to reduce bandwidth usage
-- 🎚️ **Playback Speed Control** — Adjust speed without pitch distortion
-- 📤 **M3U Import / Export** — Interoperable playlist files
-- 🔊 **Audio Normalization** — Normalize loudness of downloaded files via `ffmpeg`
-<<<<<<< HEAD
 ---
 
 ## 🖥️ Supported Platforms
@@ -44,36 +38,100 @@ Vanguard Player is a desktop music application built with Tauri (Rust backend) a
 |----------|--------|
 | Linux (x86_64) | ✅ Fully supported |
 | Windows 10/11 | ✅ Fully supported |
-| macOS | ❌ Not supported |
+| macOS | ✅ Fully supported |
 
 ---
 
 ## 🚀 Installation
 
-=======
+### 📥 For End Users — Quick Start
+
+#### macOS
+
+**Step 1: Download**
+- Go to the [GitHub Releases](https://github.com/ishmweet/vanguard-player/releases) page
+- Download the latest `.dmg` file (e.g., `vanguard-player-0.1.0.dmg` for arm64 or x86_64)
+
+**Step 2: Install the App**
+1. Double-click the `.dmg` file to mount it
+2. Drag the **Vanguard Player** app icon to the **Applications** folder
+3. Eject the DMG file
+4. Open **Applications** and double-click **Vanguard Player**
+
+**Step 3: Grant Permissions**
+- Click **Open** when prompted by macOS security ("Vanguard Player cannot be opened because Apple cannot check it for malicious software")
+- This is normal for unsigned apps; the code is open-source and safe
+
+**Step 4: Install Runtime Dependencies**
+The app will check for required dependencies (`mpv`, `yt-dlp`, `ffmpeg`) on first launch.
+
+**Option A: Let the app auto-install (Recommended)**
+- The app will prompt you to install missing dependencies
+- Click **Install Dependencies** → **Auto-Install**
+- Enter your Mac password when prompted
+- Homebrew will be installed automatically if needed
+
+**Option B: Manual installation via Terminal**
+```bash
+# Install Homebrew first (if you don't have it)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Then install the dependencies
+brew install mpv ffmpeg yt-dlp
+```
+
+**Done!** You can now search, stream, and download music.
 
 ---
 
-## 🖥️ Supported Platforms
+#### Windows
 
-| Platform | Status |
-|----------|--------|
-| Linux (x86_64) | ✅ Fully supported |
-| Windows 10/11 | ✅ Fully supported |
-| macOS | ❌ Not supported |
+**Step 1: Download**
+- Go to [GitHub Releases](https://github.com/ishmweet/vanguard-player/releases)
+- Download the `.msi` or `.exe` installer for your system
+
+**Step 2: Install**
+- Double-click the installer and follow the prompts
+- The app will be added to your **Start Menu**
+
+**Step 3: Install Runtime Dependencies**
+On first launch, the app will detect missing dependencies.
+- Click **Install Dependencies** → **Auto-Install**
+- The system will use `winget` or `chocolatey` to install `mpv`, `ffmpeg`, and `yt-dlp`
+- If auto-install fails, [install Chocolatey](https://chocolatey.org/install) and try again
 
 ---
 
-## 🚀 Installation
+#### Linux
 
->>>>>>> 812b31f (Fixed songs reordering issue in the playlists and queue area)
-Download the latest release for your platform from the Releases page on GitHub.
+**Step 1: Download**
+- Go to [GitHub Releases](https://github.com/ishmweet/vanguard-player/releases)
+- Download `.AppImage` (works on any Linux) or `.deb` (Ubuntu/Debian)
 
-### Linux
-Download the `.AppImage` or `.deb` package and run it directly. You will also need the [runtime dependencies](#runtime-dependencies) installed.
+**Step 2: Install**
 
-### Windows
-Download and run the `.msi` or `.exe` installer. Runtime dependencies can be installed automatically from within the app via **Settings → Dependencies → Auto-Install**.
+*For AppImage:*
+```bash
+chmod +x vanguard-player-*.AppImage
+./vanguard-player-*.AppImage
+```
+
+*For .deb:*
+```bash
+sudo dpkg -i vanguard-player-*.deb
+```
+
+**Step 3: Install Runtime Dependencies**
+```bash
+# Ubuntu/Debian
+sudo apt install mpv ffmpeg yt-dlp
+
+# Fedora/RHEL
+sudo dnf install mpv ffmpeg yt-dlp
+
+# Arch
+sudo pacman -S mpv ffmpeg yt-dlp
+```
 
 ---
 
@@ -87,7 +145,64 @@ Vanguard Player relies on three external tools at runtime. The app checks for th
 | `yt-dlp` | YouTube search, streaming URL resolution, and downloads |
 | `ffmpeg` / `ffprobe` | Audio metadata, waveform generation, and normalization |
 
-> **Tip:** On Linux, you can install these manually or let the in-app auto-installer attempt it. On Windows, auto-install uses `winget` or `chocolatey`.
+> **Tip:** 
+> - **Linux**: Install manually or let the in-app auto-installer attempt it.
+> - **Windows**: Auto-install uses `winget` or `chocolatey`.
+> - **macOS**: Auto-install uses Homebrew. Install it first from https://brew.sh if not already installed.
+
+---
+
+## 🛠️ For Developers — Build from Source
+
+### macOS Development Setup
+
+**Prerequisites:**
+- macOS 10.13+
+- Apple Silicon (M1/M2/M3) or Intel Mac
+
+**Step 1: Install Xcode Command Line Tools**
+```bash
+xcode-select --install
+```
+
+**Step 2: Install Homebrew**
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+**Step 3: Install Dependencies**
+```bash
+brew install node rust mpv ffmpeg yt-dlp
+
+# Verify installations
+node --version    # v18+
+rustc --version   # 1.70+
+mpv --version
+yt-dlp --version
+```
+
+**Step 4: Clone & Build**
+```bash
+# Clone the repository
+git clone https://github.com/ishmweet/vanguard-player.git
+cd vanguard-player
+
+# Install JavaScript dependencies
+npm install
+
+# Install Tauri CLI
+cargo install tauri-cli
+
+# Run in development mode (hot-reload)
+cargo tauri dev
+```
+
+**Step 5: Build Release Installer**
+```bash
+cargo tauri build
+```
+
+The `.dmg` installer and binary will be in `src-tauri/target/release/bundle/macos/`.
 
 ---
 

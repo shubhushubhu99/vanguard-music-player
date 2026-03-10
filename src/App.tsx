@@ -98,6 +98,27 @@ function clampMenu(x: number, y: number, w = 260, h = 320) {
   return { x: cx, y: cy };
 }
 
+// ─── SAFE TAURI INVOKE WRAPPER ───────────────────────────────────────────────
+/** Safe wrapper for invoking Tauri commands with retry logic */
+async function safeInvoke<T = unknown>(cmd: string, args?: Record<string, unknown>, retries = 3): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      if (!window.__TAURI_INTERNALS__) {
+        if (i < retries - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          continue;
+        }
+        throw new Error("Tauri bridge not available");
+      }
+      return await invoke<T>(cmd, args);
+    } catch (e) {
+      if (i === retries - 1) throw e;
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+  throw new Error(`Failed to invoke "${cmd}" after ${retries} retries`);
+}
+
 // ─── SLEEP TIMER BUTTON (top-right, animated) ─────────────────────────────────
 const SleepTimerButton = React.memo(({
   sleepTimer, onOpen,
@@ -1553,8 +1574,8 @@ export default function VanguardPlayer() {
 
   // ── Init ──────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    invoke<DepsStatus>('check_dependencies').then(setDeps).catch(() => {});
-    invoke<string>('get_yt_dlp_version').then(setYtDlpVersion).catch(() => {});
+    safeInvoke<DepsStatus>('check_dependencies').then(setDeps).catch(() => {});
+    safeInvoke<string>('get_yt_dlp_version').then(setYtDlpVersion).catch(() => {});
   }, []);
 
   // ── Sleep timer poll — actually pauses when expired ──────────────────────
